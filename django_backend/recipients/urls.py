@@ -4,6 +4,7 @@ from .views import (
     AvailableListingsView, RequestListingView, MyRequestsView,
     CancelRequestView, RecipientListingViewSet,
     FoodRequestViewSet, AdminFoodRequestsView,
+    CompleteListingView,
 )
 
 router = DefaultRouter()
@@ -16,6 +17,7 @@ urlpatterns = [
     path('request/<uuid:pk>/', RequestListingView.as_view(), name='accept-donation'),
     path('my-requests/', MyRequestsView.as_view(), name='my-requests'),
     path('request/<uuid:pk>/cancel/', CancelRequestView.as_view(), name='cancel-donation'),
+    path('request/<uuid:pk>/complete/', CompleteListingView.as_view(), name='complete-donation'),
     # Admin food requests
     path('admin-requests/', AdminFoodRequestsView.as_view(), name='admin-food-requests'),
 ]

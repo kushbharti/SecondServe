@@ -1,9 +1,11 @@
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
 from .serializers import (
     UserRegisterSerializer,
@@ -13,6 +15,11 @@ from .serializers import (
 from .permissions import IsAdmin
 
 User = get_user_model()
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    """Tighter throttle for the login endpoint — 10 attempts/min."""
+    scope = 'login'
 
 DONOR_ROLES = ('DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE')
 RECEIVER_ROLES = ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL')
@@ -92,6 +99,7 @@ class RegisterView(generics.CreateAPIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -231,3 +239,35 @@ class AdminListUsersView(generics.ListAPIView):
             data=UserProfileSerializer(qs, many=True).data,
             message="All users retrieved.",
         )
+
+
+# ---------------------------------------------------------------------------
+# Logout
+# ---------------------------------------------------------------------------
+
+class LogoutView(APIView):
+    """
+    POST /api/auth/logout/
+    Body: { "refresh": "<refresh_token>" }
+    Blacklists the refresh token so it can no longer be used to obtain
+    new access tokens. The client should discard both tokens.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return error_response(
+                message="Refresh token is required.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except (TokenError, InvalidToken) as e:
+            return error_response(
+                message="Invalid or already-blacklisted token.",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        return success_response(data={}, message="Logged out successfully.")

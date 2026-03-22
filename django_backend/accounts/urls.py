@@ -4,6 +4,7 @@ from .views import (
     RegisterView,
     CustomTokenObtainPairView,
     UserProfileView,
+    LogoutView,
     AdminPendingReceiversView,
     AdminApproveReceiverView,
     AdminRejectReceiverView,
@@ -14,6 +15,8 @@ urlpatterns = [
     # Auth
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='login'),
+    # FIX: Logout endpoint — blacklists the refresh token server-side
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/profile/', UserProfileView.as_view(), name='profile'),
     path('auth/profile/update/', UserProfileView.as_view(), name='profile_update'),

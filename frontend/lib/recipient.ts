@@ -1,6 +1,7 @@
 import api from './api';
 import { FoodListing } from './donor';
 export type { FoodListing };
+
 export const recipientApi = {
     getAvailableListings: async () => {
         const response = await api.get('/recipient/available-listings/');
@@ -22,7 +23,14 @@ export const recipientApi = {
         return response.data?.data ?? response.data;
     },
 
-    // New methods for Recipient creating and managing their requests
+    // FIX: Added missing completeDonation — calls the CompleteListingView endpoint
+    // that exists on the backend but was never wired up in the frontend
+    completeDonation: async (id: string) => {
+        const response = await api.post(`/recipient/request/${id}/complete/`);
+        return response.data?.data ?? response.data;
+    },
+
+    // Recipient creating and managing their own food requests
     getRequests: async () => {
         const response = await api.get('/recipient/requests/');
         return response.data?.data ?? response.data;

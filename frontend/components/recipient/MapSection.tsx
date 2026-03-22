@@ -130,7 +130,7 @@ export function MapSection() {
                 <button 
                     onClick={async () => {
                         try {
-                            await recipientApi.requestListing(listing.id);
+                            await recipientApi.acceptDonation(listing.id);
                             alert("Request sent!");
                             window.location.reload();
                         } catch(e) {

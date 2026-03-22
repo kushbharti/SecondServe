@@ -23,7 +23,7 @@ class FoodListing(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         related_name='matched_listings', null=True, blank=True
     )
-    listing_type = models.CharField(max_length=20, choices=LISTING_TYPE_CHOICES, default='donation')
+    listing_type = models.CharField(max_length=20, choices=LISTING_TYPE_CHOICES, default='donation', db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     food_type = models.CharField(max_length=100)
@@ -31,7 +31,7 @@ class FoodListing(models.Model):
     pickup_address = models.TextField()
     expiry_date = models.DateTimeField()
     image = models.ImageField(upload_to='food_images/', null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,7 +68,7 @@ class FoodPost(models.Model):
     expiry_time = models.DateTimeField(blank=True, null=True)
     pickup_address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available', db_index=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

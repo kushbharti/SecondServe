@@ -137,7 +137,7 @@ export function FoodGallery() {
                     onClick={async () => {
                         if (confirm(`Request "${listing.title}"?`)) {
                              try {
-                                await recipientApi.requestListing(listing.id);
+                                await recipientApi.acceptDonation(listing.id);
                                 window.location.reload(); 
                              } catch(e) {
                                 alert("Failed to request listing");

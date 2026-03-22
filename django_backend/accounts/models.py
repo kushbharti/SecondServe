@@ -57,8 +57,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
-    # Role — required
-    role = models.CharField(max_length=30, choices=ROLE_CHOICES)
+    # Role — required; indexed for permission checks on every request
+    role = models.CharField(max_length=30, choices=ROLE_CHOICES, db_index=True)
 
     # Common fields
     phone_number = models.CharField(max_length=20, blank=True, null=True)
@@ -122,11 +122,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     website_url = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
-    # Verification status
+    # Verification status; indexed because IsReceiver permission checks it on every request
     verification_status = models.CharField(
         max_length=20,
         choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')],
-        default='pending'
+        default='pending',
+        db_index=True,
     )
 
     USERNAME_FIELD = 'email'

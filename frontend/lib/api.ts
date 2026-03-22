@@ -5,57 +5,62 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    // 'Content-Type': 'application/json', // Let axios set this automatically (multipart for files, json for objects)
-  },
+  // Let axios set Content-Type automatically (multipart for FormData, json for objects)
 });
 
-// Request interceptor to add token
+// Request interceptor — attach Bearer token from cookie
 api.interceptors.request.use(
   (config) => {
-    const token = Cookies.get('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // SSR safety: Cookies only available in browser
+    if (typeof window !== 'undefined') {
+      const token = Cookies.get('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor — silent token refresh on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Prevent infinite loop
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
+        if (typeof window === 'undefined') throw new Error('SSR — cannot refresh');
+
         const refreshToken = Cookies.get('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
+        if (!refreshToken) throw new Error('No refresh token');
 
         const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
           refresh: refreshToken,
         });
 
         const { access } = response.data;
-        Cookies.set('accessToken', access, { expires: 1 }); // 1 day
 
-        // Retry original request with new token
+        // FIX: Preserve role-aware expiry — donors get 7 days, receivers 1 day
+        const role = Cookies.get('role') || '';
+        const DONOR_ROLES = ['DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE'];
+        const accessExpiry = DONOR_ROLES.includes(role) ? 7 : 1;
+        Cookies.set('accessToken', access, { expires: accessExpiry, sameSite: 'Lax' });
+
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest);
-      } catch (refreshError) {
-        // If refresh fails, clear everything and redirect to login
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+      } catch {
+        // Refresh failed — clear auth and redirect to login
+        if (typeof window !== 'undefined') {
+          Cookies.remove('accessToken');
+          Cookies.remove('refreshToken');
+          Cookies.remove('role');
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
       }
     }
 

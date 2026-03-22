@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { 
   Package, 
   Users, 
@@ -23,8 +24,8 @@ export default function DonorDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     active: 0,
-    totalMeals: 0,
-    impact: 0,
+    completed: 0,
+    totalListings: 0,
     pending: 0
   });
 
@@ -35,19 +36,24 @@ export default function DonorDashboardPage() {
           donorApi.getListings(),
           donorApi.getAvailableRequests(),
         ]);
-        setListings(listingsData);
-        setAvailableRequests(requestsData.slice(0, 4));
+        const safeListings: FoodListing[] = Array.isArray(listingsData) ? listingsData : [];
+        const safeRequests: FoodListing[] = Array.isArray(requestsData) ? requestsData : [];
 
-        const activeCount = listingsData.filter((l: FoodListing) => l.status === 'available').length;
-        const pendingCount = listingsData.filter((l: FoodListing) => l.status === 'assigned').length;
+        setListings(safeListings);
+        setAvailableRequests(safeRequests.slice(0, 4));
+
+        const activeCount = safeListings.filter((l) => l.status === 'available').length;
+        const pendingCount = safeListings.filter((l) => l.status === 'assigned').length;
+        const completedCount = safeListings.filter((l) => l.status === 'completed').length;
         setStats({
           active: activeCount,
-          totalMeals: listingsData.length * 10,
-          impact: listingsData.filter((l: FoodListing) => l.status === 'completed').length * 5,
-          pending: pendingCount
+          completed: completedCount,
+          totalListings: safeListings.length,
+          pending: pendingCount,
         });
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        toast.error('Failed to load dashboard data. Please refresh.');
+        console.error('Dashboard fetch error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -58,25 +64,80 @@ export default function DonorDashboardPage() {
 
   const handleAcceptRequest = async (id: string) => {
     if (!confirm('Accept this food request and donate?')) return;
+    const toastId = toast.loading('Processing...');
     try {
       await donorApi.acceptRequest(id);
       setAvailableRequests(prev => prev.filter(r => r.id !== id));
-    } catch (error) {
-      console.error('Failed to accept request:', error);
+      toast.success('Request accepted! The NGO has been notified.', { id: toastId });
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to accept request. Please try again.';
+      toast.error(message, { id: toastId });
     }
   };
 
+  // FIX: Real progress towards a monthly goal of 20 listings
+  const MONTHLY_GOAL = 20;
+  const progressPercent = Math.min(
+    Math.round((stats.completed / MONTHLY_GOAL) * 100),
+    100
+  );
+
   const statCards = [
-    { label: 'Active Listings', value: stats.active.toString(), icon: Package, color: 'text-orange-600', bg: 'bg-orange-100/50' },
-    { label: 'Est. Meals Provided', value: stats.totalMeals.toString(), icon: Users, color: 'text-green-600', bg: 'bg-green-100/50' },
-    { label: 'Impact Score', value: stats.impact.toString(), icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-100/50' },
-    { label: 'Pending Pickups', value: stats.pending.toString(), icon: Clock, color: 'text-purple-600', bg: 'bg-purple-100/50' },
+    { 
+      label: 'Active Listings', 
+      value: stats.active.toString(), 
+      icon: Package, 
+      color: 'text-orange-600', 
+      bg: 'bg-orange-100/50',
+      desc: 'Currently available'
+    },
+    { 
+      label: 'Est. Meals Provided', 
+      // Estimate: each completed listing serves ~10 people
+      value: (stats.completed * 10).toLocaleString(), 
+      icon: Users, 
+      color: 'text-green-600', 
+      bg: 'bg-green-100/50',
+      desc: 'From completed donations'
+    },
+    { 
+      label: 'Completed', 
+      value: stats.completed.toString(), 
+      icon: TrendingUp, 
+      color: 'text-blue-600', 
+      bg: 'bg-blue-100/50',
+      desc: 'Total fulfilled donations'
+    },
+    { 
+      label: 'Pending Pickups', 
+      value: stats.pending.toString(), 
+      icon: Clock, 
+      color: 'text-purple-600', 
+      bg: 'bg-purple-100/50',
+      desc: 'Awaiting receiver pickup'
+    },
   ];
 
   if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-8 animate-in fade-in duration-300">
+        {/* Skeleton header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-8 w-56 bg-muted animate-pulse rounded-xl" />
+            <div className="h-4 w-72 bg-muted animate-pulse rounded-lg" />
+          </div>
+          <div className="h-10 w-40 bg-muted animate-pulse rounded-xl" />
+        </div>
+        {/* Skeleton stats */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-2xl border bg-card p-6 shadow-xs">
+              <div className="h-4 w-24 bg-muted animate-pulse rounded mb-3" />
+              <div className="h-7 w-12 bg-muted animate-pulse rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -115,6 +176,7 @@ export default function DonorDashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                   <h3 className="mt-2 text-2xl font-bold tracking-tight">{stat.value}</h3>
+                  <p className="text-xs text-muted-foreground/70 mt-1">{stat.desc}</p>
                 </div>
                 <div className={`rounded-xl p-3 ${stat.bg}`}>
                   <Icon className={`h-5 w-5 ${stat.color}`} />
@@ -137,7 +199,12 @@ export default function DonorDashboardPage() {
           </div>
           <div className="p-4 space-y-3">
             {listings.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">No listings yet. Create your first one!</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No listings yet.{' '}
+                <Link href="/donor/add-listing" className="text-orange-600 font-medium hover:underline">
+                  Create your first one!
+                </Link>
+              </div>
             ) : (
               listings.slice(0, 5).map((listing) => (
                 <div key={listing.id} className="flex items-center justify-between hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors">
@@ -171,7 +238,7 @@ export default function DonorDashboardPage() {
                 <Inbox className="h-4 w-4 text-primary" />
                 Incoming Food Requests
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">From NGOs, Orphanages & Hospitals</p>
+              <p className="text-xs text-muted-foreground mt-1">From NGOs, Orphanages &amp; Hospitals</p>
             </div>
             <Link href="/donor/requests" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
               View all <ArrowRight className="h-3 w-3" />
@@ -194,7 +261,8 @@ export default function DonorDashboardPage() {
                   </div>
                   <button
                     onClick={() => handleAcceptRequest(req.id)}
-                    className="shrink-0 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 font-semibold transition-colors"
+                    className="shrink-0 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                    aria-label={`Donate to ${req.author_name || 'organization'}`}
                   >
                     Donate
                   </button>
@@ -205,16 +273,20 @@ export default function DonorDashboardPage() {
         </div>
       </div>
 
-      {/* Impact Banner */}
+      {/* Impact Banner — FIX: Real data-driven progress bar */}
       <div className="rounded-2xl border bg-orange-50/50 p-6 shadow-xs">
-        <h3 className="font-semibold text-orange-900 mb-2">Your Impact</h3>
+        <h3 className="font-semibold text-orange-900 mb-1">Your Monthly Impact</h3>
         <p className="text-sm text-orange-800/80 mb-3">
-          You've helped provide approximately <strong>{stats.totalMeals} meals</strong> to families in need. Keep donating to reach your monthly goal!
+          You&apos;ve completed <strong>{stats.completed}</strong> donations this month.
+          Goal: <strong>{MONTHLY_GOAL}</strong> donations.
         </p>
-        <div className="h-2 w-full bg-orange-200 rounded-full overflow-hidden">
-          <div className="h-full w-[75%] bg-orange-500 rounded-full transition-all" />
+        <div className="h-2 w-full bg-orange-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+          <div 
+            className="h-full bg-orange-500 rounded-full transition-all duration-700"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
-        <p className="text-xs text-orange-700 mt-2 text-right">75% to monthly goal</p>
+        <p className="text-xs text-orange-700 mt-2 text-right">{progressPercent}% to monthly goal</p>
       </div>
     </div>
   );

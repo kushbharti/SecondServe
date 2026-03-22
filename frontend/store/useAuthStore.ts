@@ -1,3 +1,6 @@
+/**
+ * Unified auth store with backend logout, SSR safety, and role-aware token expiry.
+ */
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
@@ -9,20 +12,26 @@ interface AuthState {
   isLoading: boolean;
   login: (credentials: any) => Promise<void>;
   register: (data: any) => Promise<{ pending?: boolean; message?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
-// FIXED: Helper to set cookies with role-aware expiry
+// FIX: Helper to set cookies with role-aware expiry
 // Donors: 7 days, Receivers: 1 day (24h)
 function setAuthCookies(access: string, refresh: string, role: string) {
   const isDonor = DONOR_ROLES.includes(role as any);
-  const accessExpiry = isDonor ? 7 : 1;   // days
-  const refreshExpiry = isDonor ? 30 : 7;  // days
+  const accessExpiry = isDonor ? 7 : 1;
+  const refreshExpiry = isDonor ? 30 : 7;
 
   Cookies.set('accessToken', access, { expires: accessExpiry, sameSite: 'Lax' });
   Cookies.set('refreshToken', refresh, { expires: refreshExpiry, sameSite: 'Lax' });
   Cookies.set('role', role, { expires: accessExpiry, sameSite: 'Lax' });
+}
+
+function clearAuthCookies() {
+  Cookies.remove('accessToken');
+  Cookies.remove('refreshToken');
+  Cookies.remove('role');
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -34,15 +43,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const response = await api.post('/auth/login/', credentials);
-
-      // FIXED: Unified response format wraps data in response.data.data
       const payload = response.data?.data ?? response.data;
       const { access, refresh, user, role } = payload;
 
-      // FIXED: role-specific cookie expiry
       setAuthCookies(access, refresh, role || user?.role);
-
-      // FIXED: Redirect to correct dashboard based on role
       set({ user, isAuthenticated: true, isLoading: false });
 
       const userRole = role || user?.role || '';
@@ -63,8 +67,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const response = await api.post('/auth/register/', data);
-
-      // FIXED: unified format
       const payload = response.data?.data ?? response.data;
       const { access, refresh, user } = payload;
 
@@ -74,7 +76,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user, isAuthenticated: true, isLoading: false });
         return { pending: false };
       } else {
-        // Receiver pending — set user in store but NOT authenticated
+        // Receiver pending — show message but do NOT authenticate
         set({ user, isAuthenticated: false, isLoading: false });
         return {
           pending: true,
@@ -87,17 +89,32 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  logout: () => {
-    Cookies.remove('accessToken');
-    Cookies.remove('refreshToken');
-    Cookies.remove('role');
+  // FIX: Call the backend logout endpoint to blacklist the refresh token
+  // before clearing local cookies. Falls back to local-only logout if API fails.
+  logout: async () => {
+    const refreshToken = typeof window !== 'undefined' ? Cookies.get('refreshToken') : null;
+    const accessToken = typeof window !== 'undefined' ? Cookies.get('accessToken') : null;
+
+    if (refreshToken && accessToken) {
+      try {
+        await api.post('/auth/logout/', { refresh: refreshToken });
+      } catch {
+        // Ignore errors — still clear local state
+      }
+    }
+
+    clearAuthCookies();
     set({ user: null, isAuthenticated: false, isLoading: false });
+
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
   },
 
+  // FIX: Guard Cookies API calls with typeof window check for SSR safety
   checkAuth: async () => {
+    if (typeof window === 'undefined') return;
+
     const token = Cookies.get('accessToken');
     if (!token) {
       set({ user: null, isAuthenticated: false, isLoading: false });
@@ -106,10 +123,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const response = await api.get('/auth/profile/');
-      // FIXED: unified response format
       const user = response.data?.data ?? response.data;
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
+      clearAuthCookies();
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
