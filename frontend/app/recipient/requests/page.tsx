@@ -44,13 +44,18 @@ export default function MyRequestsPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'available' ? 'completed' : 'available';
+  const handleComplete = async (id: string, currentStatus: string) => {
+    if (currentStatus !== 'assigned') {
+        alert('You can only complete a request once a donor has accepted it.');
+        return;
+    }
+    if (!confirm('Mark this request as safely fulfilled?')) return;
     try {
-      await recipientApi.updateRequest(id, { status: newStatus as any });
-      setRequests(prev => prev.map(l => String(l.id) === id ? { ...l, status: newStatus as any } : l));
+      await recipientApi.completeDonation(id);
+      setRequests(prev => prev.map(l => String(l.id) === id ? { ...l, status: 'completed' } : l));
     } catch (error) {
        console.error('Failed to update status:', error);
+       alert('Failed to mark as fulfilled.');
     }
   };
 
@@ -141,16 +146,25 @@ export default function MyRequestsPage() {
                         }`}>
                         {item.status === 'available' ? 'Pending' : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                         </span>
+                        {item.status === 'assigned' && item.matched_user_name && (
+                            <div className="mt-2 text-xs text-blue-800">
+                                <div>Donor: <strong>{item.matched_user_name}</strong></div>
+                                {item.matched_user_phone && <div>📞 {item.matched_user_phone}</div>}
+                                {item.matched_user_email && <div>✉️ <a href={`mailto:${item.matched_user_email}`} className="hover:underline">{item.matched_user_email}</a></div>}
+                            </div>
+                        )}
                     </td>
                     <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                            onClick={() => handleStatusUpdate(String(item.id), item.status)}
-                            className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors" 
-                            title={item.status === 'available' ? "Mark as Fulfilled" : "Mark as Pending"}
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                        </button>
+                        {item.status === 'assigned' && (
+                          <button 
+                              onClick={() => handleComplete(String(item.id), item.status)}
+                              className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors" 
+                              title="Mark as Fulfilled"
+                          >
+                              <CheckCircle className="h-4 w-4" />
+                          </button>
+                        )}
                         <button 
                             onClick={() => handleDelete(String(item.id))}
                             className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors" 

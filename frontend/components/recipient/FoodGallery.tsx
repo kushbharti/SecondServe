@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
+import { getFallbackFoodImage } from "@/lib/images";
 
 export function FoodGallery() {
   const [listings, setListings] = useState<FoodListing[]>([]);
@@ -75,17 +76,11 @@ export function FoodGallery() {
             >
               {/* Image */}
               <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10">
-                {listing.image ? (
-                  <img
-                    src={listing.image}
-                    alt={listing.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
-                  </div>
-                )}
+                <img
+                  src={listing.image || getFallbackFoodImage(listing.food_type, listing.id)}
+                  alt={listing.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                 {/* Status badge */}

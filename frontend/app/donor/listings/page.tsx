@@ -149,6 +149,13 @@ export default function ManageListingsPage() {
                         }`}>
                         {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                         </span>
+                        {item.status === 'assigned' && item.matched_user_name && (
+                            <div className="mt-2 text-xs text-blue-800">
+                                <div>Pickup: <strong>{item.matched_user_name}</strong></div>
+                                {item.matched_user_phone && <div>📞 {item.matched_user_phone}</div>}
+                                {item.matched_user_email && <div>✉️ <a href={`mailto:${item.matched_user_email}`} className="hover:underline">{item.matched_user_email}</a></div>}
+                            </div>
+                        )}
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
                         {item.quantity}

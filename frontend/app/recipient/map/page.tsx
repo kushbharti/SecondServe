@@ -155,11 +155,11 @@ export default function RecipientMapPage() {
                             <Clock className="h-4 w-4" />
                          </div>
                          <div>
-                            <p className="font-semibold text-sm">Best Before</p>
-                            <p className="text-sm text-muted-foreground mt-0.5">
-                               {new Date(selectedListing.expiryDate).toLocaleDateString(undefined, {
-                                  weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric'
-                               })}
+                             <p className="font-semibold text-sm">Best Before</p>
+                             <p className="text-sm text-muted-foreground mt-0.5">
+                                {new Date(selectedListing.expiresAt).toLocaleDateString(undefined, {
+                                   weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric'
+                                })}
                             </p>
                          </div>
                       </div>

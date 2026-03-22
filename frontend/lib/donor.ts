@@ -16,8 +16,11 @@ export interface FoodListing {
     author_name?: string;
     author_role?: string;
     author_phone?: string;
+    author_email?: string;
     matched_user?: string | null;
     matched_user_name?: string | null;
+    matched_user_phone?: string | null;
+    matched_user_email?: string | null;
     image?: string | null;
 }
 

@@ -102,10 +102,10 @@ export function StatsCards() {
   // Role Specific Capacity Card
   const capacityMetric = useMemo(() => {
     if (!user) return null;
-    if (user.role === 'ngo') return { label: 'People Served', value: user.capacity_people_served || 0, desc: 'Target reach per month' };
-    if (user.role === 'orphanage') return { label: 'Children Supported', value: user.capacity_children_supported || 0, desc: 'Current residents' };
-    if (user.role === 'old_age_home') return { label: 'Residents', value: user.capacity_residents_supported || 0, desc: 'Seniors in care' };
-    if (user.role === 'hospital') return { label: 'Hospital Beds', value: user.number_of_beds || 0, desc: 'Total bed capacity' };
+    if (user.role === 'NGO') return { label: 'People Served', value: user.capacity_people_served || 0, desc: 'Target reach per month' };
+    if (user.role === 'ORPHANAGE') return { label: 'Children Supported', value: user.capacity_children_supported || 0, desc: 'Current residents' };
+    if (user.role === 'OLD_AGE_HOME') return { label: 'Residents', value: user.capacity_residents_supported || 0, desc: 'Seniors in care' };
+    if (user.role === 'GOVERNMENT_HOSPITAL') return { label: 'Hospital Beds', value: user.number_of_beds || 0, desc: 'Total bed capacity' };
     return null;
   }, [user]);
 

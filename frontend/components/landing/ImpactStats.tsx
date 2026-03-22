@@ -1,41 +1,59 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { TrendingUp, UtensilsCrossed, Leaf, MapPin } from 'lucide-react';
 
-const stats = [
-  {
-    label: 'Meals Saved',
-    value: '128k+',
-    helper: 'Pounds of food rescued',
-    icon: TrendingUp,
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-400/10'
-  },
-  {
-    label: 'Meals Served',
-    value: '342k+',
-    helper: ' nutritious meals provided',
-    icon: UtensilsCrossed,
-    color: 'text-orange-400',
-    bg: 'bg-orange-400/10'
-  },
-  {
-    label: 'CO₂ Prevented',
-    value: '210t',
-    helper: 'Carbon emissions avoided',
-    icon: Leaf,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-400/10'
-  },
-  {
-    label: 'Communities',
-    value: '24',
-    helper: 'Active cities & regions',
-    icon: MapPin,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10'
-  }
-];
+interface StatsData {
+  meals_saved: string;
+  meals_served: string;
+  co2_prevented: string;
+  communities_count: string;
+}
 
 export function ImpactStats() {
+  // Static stats — displayed while no live stats endpoint is available
+  const stats = {
+    meals_saved: '128k+',
+    meals_served: '342k+',
+    co2_prevented: '210t',
+    communities_count: '24',
+  };
+
+  const displayStats = [
+    {
+      label: 'Meals Saved',
+      value: stats.meals_saved,
+      helper: 'Pounds of food rescued',
+      icon: TrendingUp,
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-400/10'
+    },
+    {
+      label: 'Meals Served',
+      value: stats.meals_served,
+      helper: ' nutritious meals provided',
+      icon: UtensilsCrossed,
+      color: 'text-orange-400',
+      bg: 'bg-orange-400/10'
+    },
+    {
+      label: 'CO₂ Prevented',
+      value: stats.co2_prevented,
+      helper: 'Carbon emissions avoided',
+      icon: Leaf,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-400/10'
+    },
+    {
+      label: 'Communities',
+      value: stats.communities_count,
+      helper: 'Active cities & regions',
+      icon: MapPin,
+      color: 'text-blue-400',
+      bg: 'bg-blue-400/10'
+    }
+  ];
+
   return (
     <section className="relative py-24 lg:py-32 overflow-hidden">
       <div className="absolute inset-0 bg-[#0A261D] -z-20" />
@@ -67,7 +85,7 @@ export function ImpactStats() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => {
+          {displayStats.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div
@@ -91,11 +109,11 @@ export function ImpactStats() {
                       </p>
                    </div>
                   
-                  <p className="text-5xl font-black tracking-tight text-white group-hover:scale-105 transition-transform duration-500 origin-left">
-                    <span className="bg-gradient-to-br from-white via-white to-white/50 bg-clip-text text-transparent group-hover:from-white group-hover:via-emerald-200 group-hover:to-teal-200 transition-all duration-500">
-                      {stat.value}
-                    </span>
-                  </p>
+                  <div className="text-5xl font-black tracking-tight text-white group-hover:scale-105 transition-transform duration-500 origin-left">
+                     <span className="bg-gradient-to-br from-white via-white to-white/50 bg-clip-text text-transparent group-hover:from-white group-hover:via-emerald-200 group-hover:to-teal-200 transition-all duration-500">
+                       {stat.value}
+                     </span>
+                  </div>
                   <p className="text-sm text-emerald-100/60 font-medium">{stat.helper}</p>
                 </div>
                 
@@ -110,4 +128,3 @@ export function ImpactStats() {
     </section>
   );
 }
-

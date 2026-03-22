@@ -13,6 +13,7 @@ from .serializers import (
     UserProfileSerializer,
 )
 from .permissions import IsAdmin
+from backend.cache import cache_service, TTL_MEDIUM, build_user_profile_key
 
 User = get_user_model()
 
@@ -21,7 +22,7 @@ class LoginRateThrottle(AnonRateThrottle):
     """Tighter throttle for the login endpoint — 10 attempts/min."""
     scope = 'login'
 
-DONOR_ROLES = ('DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE')
+DONOR_ROLES = ('DONOR',)
 RECEIVER_ROLES = ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL')
 
 
@@ -149,10 +150,13 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         user = self.get_object()
-        return success_response(
-            data=UserProfileSerializer(user).data,
-            message="Profile retrieved.",
+        cache_key = build_user_profile_key(str(user.id))
+        data = cache_service.get_or_set(
+            cache_key,
+            lambda: UserProfileSerializer(user).data,
+            ttl=TTL_MEDIUM,
         )
+        return success_response(data=data, message="Profile retrieved.")
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -165,6 +169,8 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         serializer.save()
+        # Invalidate cached profile so next GET is fresh
+        cache_service.invalidate_user_profile(str(instance.id))
         return success_response(
             data=serializer.data,
             message="Profile updated successfully.",

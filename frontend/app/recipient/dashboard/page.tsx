@@ -91,7 +91,7 @@ export default function RecipientDashboardPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
-          {message.title}
+          Welcome back, {(user?.contact_person || user?.organization_name || user?.email?.split('@')[0] || 'there')} 👋
         </h1>
         <p className="text-muted-foreground">
           {message.desc}

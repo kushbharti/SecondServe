@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { isReceiverRole } from '@/types/user';
 
 // Calculate estimated value based on meals
 function calculatePrice(estimatedMeals: number): number {
@@ -85,7 +86,7 @@ export default function FoodItemDetailPage() {
 
   const estimatedValue = calculatePrice(listing.estimatedMeals);
   const isClaimed = listing.claimedByRecipientId === user?.id;
-  const canClaim = listing.status === 'active' && user && user.role === 'recipient' && !isClaimed;
+  const canClaim = listing.status === 'active' && user && isReceiverRole(user.role) && !isClaimed;
 
   const handleClaim = async () => {
     if (!user) {

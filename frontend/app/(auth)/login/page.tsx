@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { UserRole } from "@/types/user";
-import { DONOR_ROLES, RECEIVER_ROLES } from "@/types/user";
+import { RECEIVER_ROLES } from "@/types/user";
 import {
   Mail,
   Lock,
@@ -12,16 +12,13 @@ import {
   ArrowRight,
   Hash,
   ChevronDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
-// FIXED: All 10 roles with display labels and grouping
+// Only DONOR is the single donor type
 const DONOR_ROLE_OPTIONS = [
-  { id: 'DONOR', label: 'Individual Donor' },
-  { id: 'HOTEL', label: 'Hotel' },
-  { id: 'CAFE', label: 'Cafe' },
-  { id: 'RESTAURANT', label: 'Restaurant' },
-  { id: 'CANTEEN', label: 'Canteen' },
-  { id: 'CATERING_SERVICE', label: 'Catering Service' },
+  { id: 'DONOR', label: 'Food Donor' },
 ];
 
 const RECEIVER_ROLE_OPTIONS = [
@@ -49,6 +46,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [officialEmail, setOfficialEmail] = useState(""); // For hospitals
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [role, setRole] = useState<UserRole>("DONOR");
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +59,12 @@ export default function LoginPage() {
 
     try {
       const payload: any = {
-        // FIXED: Hospitals log in with official_email, others use email
         email: role === 'GOVERNMENT_HOSPITAL' ? officialEmail || email : email,
         password,
         role,
       };
 
-      // FIXED: Add role-specific registration number fields
+      // Add role-specific registration number fields
       const regField = getRegField(role);
       if (regField) {
         payload[regField.field] = registrationNumber;
@@ -78,9 +75,7 @@ export default function LoginPage() {
       }
 
       await login(payload);
-      // Login handler in useAuthStore already redirects to correct dashboard
     } catch (err: any) {
-      // FIXED: Handle unified response format errors
       const data = err.response?.data;
       if (data?.message) {
         setError(data.message);
@@ -101,7 +96,7 @@ export default function LoginPage() {
     <div className="space-y-6 animate-fade-in">
       <form onSubmit={handleSubmit} className="space-y-5">
 
-        {/* FIXED: Grouped role selector — Donors vs Receivers */}
+        {/* Grouped role selector — Donors vs Receivers */}
         <div className="space-y-2">
           {/* Donor group */}
           <button
@@ -117,7 +112,7 @@ export default function LoginPage() {
             <ChevronDown className={`h-4 w-4 transition-transform ${group === 'donor' ? 'rotate-180' : ''}`} />
           </button>
           {group === 'donor' && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-1 pl-1">
+            <div className="grid grid-cols-1 gap-2 pt-1 pl-1">
               {DONOR_ROLE_OPTIONS.map((r) => (
                 <button
                   key={r.id}
@@ -168,7 +163,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* FIXED: Registration number for receiver roles */}
+        {/* Registration number for receiver roles */}
         {isReceiver && regField && (
           <div className="space-y-1.5 animate-slide-in">
             <label className="text-xs font-semibold text-foreground/80 ml-1">
@@ -216,7 +211,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Password */}
+        {/* Password with show/hide toggle */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between ml-1">
             <label htmlFor="password" className="text-xs font-semibold text-foreground/80">
@@ -232,15 +227,23 @@ export default function LoginPage() {
             </div>
             <input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               minLength={8}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full rounded-xl border border-input bg-muted/30 pl-10 pr-4 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+              className="block w-full rounded-xl border border-input bg-muted/30 pl-10 pr-10 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
         </div>
 

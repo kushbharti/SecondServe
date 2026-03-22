@@ -15,12 +15,12 @@ interface RoleInfoCardProps {
 }
 
 export function RoleInfoCard({ user }: RoleInfoCardProps) {
-  const isNGO = user.role === 'ngo';
-  const isOrphanage = user.role === 'orphanage';
-  const isOldAgeHome = user.role === 'old_age_home';
-  const isHospital = user.role === 'hospital';
+  const isNGO = user.role === 'NGO';
+  const isOrphanage = user.role === 'ORPHANAGE';
+  const isOldAgeHome = user.role === 'OLD_AGE_HOME';
+  const isHospital = user.role === 'GOVERNMENT_HOSPITAL';
 
-  if (user.role === 'donor') return null;
+  if (user.role === 'DONOR') return null;
 
   return (
     <div className="rounded-2xl border bg-card p-6 shadow-sm h-full">

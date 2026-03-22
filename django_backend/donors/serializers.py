@@ -10,7 +10,11 @@ class FoodListingSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
     author_role = serializers.CharField(source='author.role', read_only=True)
     author_phone = serializers.CharField(source='author.phone_number', read_only=True)
+    author_email = serializers.EmailField(source='author.email', read_only=True)
+    
     matched_user_name = serializers.SerializerMethodField()
+    matched_user_phone = serializers.CharField(source='matched_user.phone_number', read_only=True)
+    matched_user_email = serializers.EmailField(source='matched_user.email', read_only=True)
 
     class Meta:
         model = FoodListing
@@ -46,16 +50,18 @@ class FoodPostSerializer(serializers.ModelSerializer):
     """
     donor_name = serializers.SerializerMethodField(read_only=True)
     donor_role = serializers.CharField(source='donor.role', read_only=True)
+    donor_phone = serializers.CharField(source='donor.phone_number', read_only=True)
+    donor_email = serializers.EmailField(source='donor.email', read_only=True)
 
     class Meta:
         model = FoodPost
         fields = [
-            'id', 'donor', 'donor_name', 'donor_role',
+            'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',
             'food_name', 'quantity', 'food_type', 'servings',
             'expiry_time', 'pickup_address', 'city',
             'status', 'description', 'created_at',
         ]
-        read_only_fields = ('id', 'donor', 'donor_name', 'donor_role', 'created_at', 'status')
+        read_only_fields = ('id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email', 'created_at', 'status')
 
     def get_donor_name(self, obj):
         user = obj.donor

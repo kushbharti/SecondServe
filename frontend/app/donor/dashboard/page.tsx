@@ -212,9 +212,18 @@ export default function DonorDashboardPage() {
                     <div className="h-10 w-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
                       <Package className="h-5 w-5 text-orange-500" />
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{listing.title}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(listing.created_at).toLocaleDateString()} · {listing.quantity}</p>
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="font-medium text-sm truncate">{listing.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {new Date(listing.created_at).toLocaleDateString()} · {listing.quantity}
+                      </p>
+                      {listing.status === 'assigned' && listing.matched_user_name && (
+                        <div className="mt-2 text-xs text-blue-800 bg-blue-50 p-2 rounded-md border border-blue-100">
+                           <p className="font-semibold mb-0.5">Pickup by {listing.matched_user_name}</p>
+                           {listing.matched_user_phone && <p>📞 {listing.matched_user_phone}</p>}
+                           {listing.matched_user_email && <p>✉️ {listing.matched_user_email}</p>}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${

@@ -8,6 +8,7 @@ from .serializers import FoodRequestSerializer
 from donors.models import FoodListing, FoodPost
 from donors.serializers import FoodListingSerializer
 from accounts.permissions import IsReceiver, IsAdmin
+from backend.cache import cache_service
 
 
 def success_response(data, message="Success", status_code=status.HTTP_200_OK):
@@ -57,6 +58,7 @@ class FoodRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(receiver=self.request.user)
+        cache_service.invalidate('food_requests:open')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -93,6 +95,7 @@ class FoodRequestViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return error_response(message="Update failed.", errors=serializer.errors)
         serializer.save()
+        cache_service.invalidate('food_requests:open')
         return success_response(data=serializer.data, message="Food request updated.")
 
 
@@ -133,6 +136,7 @@ class RecipientListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, listing_type='request')
+        cache_service.invalidate('food_requests:open')
 
 
 class AvailableListingsView(generics.ListAPIView):
@@ -141,18 +145,20 @@ class AvailableListingsView(generics.ListAPIView):
 
     def get_queryset(self):
         # FIX: select_related prevents N+1 queries
+        from django.utils import timezone
         return FoodListing.objects.select_related(
             'author', 'matched_user'
         ).filter(
-            status='available', listing_type='donation'
+            status='available', listing_type='donation', expiry_date__gt=timezone.now()
         ).order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        return success_response(
-            data=FoodListingSerializer(qs, many=True).data,
-            message="Available listings retrieved."
+        data = cache_service.get_or_set(
+            'available_listings',
+            lambda: FoodListingSerializer(self.get_queryset(), many=True).data,
+            ttl=60
         )
+        return success_response(data=data, message="Available listings retrieved.")
 
 
 class RequestListingView(APIView):
@@ -171,6 +177,7 @@ class RequestListingView(APIView):
         listing.matched_user = request.user
         listing.status = 'assigned'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
+        cache_service.invalidate('available_listings')
         return success_response(data=FoodListingSerializer(listing).data, message="Listing accepted successfully")
 
 
@@ -208,6 +215,8 @@ class CancelRequestView(APIView):
         listing.matched_user = None
         listing.status = 'available'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
+        cache_service.invalidate('available_listings')
+        cache_service.invalidate('food_requests:open')
         return success_response(data=FoodListingSerializer(listing).data, message="Request cancelled successfully")
 
 
@@ -250,6 +259,8 @@ class CompleteListingView(APIView):
 
         listing.status = 'completed'
         listing.save(update_fields=['status', 'updated_at'])
+        cache_service.invalidate('available_listings')
+        cache_service.invalidate('food_requests:open')
         return success_response(
             data=FoodListingSerializer(listing).data,
             message='Listing marked as completed successfully'

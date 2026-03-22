@@ -9,30 +9,25 @@ import { DONOR_ROLES, RECEIVER_ROLES } from '@/types/user';
 import {
   Mail, Lock, User, AlertCircle, ArrowRight, Phone,
   Building, CheckCircle2, Heart, Home, PlusSquare,
-  UtensilsCrossed, Coffee, ChefHat,
+  Eye, EyeOff,
 } from 'lucide-react';
 
 // ============================================================
 // Role metadata
 // ============================================================
 const DONOR_ROLE_OPTIONS = [
-  { id: 'DONOR',            label: 'Individual Donor',   icon: User,           color: 'text-orange-500', desc: 'Personal donor' },
-  { id: 'HOTEL',            label: 'Hotel',              icon: Building,       color: 'text-amber-500',  desc: 'Hospitality' },
-  { id: 'CAFE',             label: 'Cafe',               icon: Coffee,         color: 'text-yellow-600', desc: 'Coffee & food' },
-  { id: 'RESTAURANT',       label: 'Restaurant',         icon: UtensilsCrossed, color: 'text-red-500',   desc: 'Dining' },
-  { id: 'CANTEEN',          label: 'Canteen',            icon: ChefHat,        color: 'text-green-600',  desc: 'Institutional' },
-  { id: 'CATERING_SERVICE', label: 'Catering Service',   icon: ChefHat,        color: 'text-teal-600',   desc: 'Events' },
+  { id: 'DONOR', label: 'Food Donor', icon: User, color: 'text-orange-500', desc: 'Donate surplus food' },
 ];
 
 const RECEIVER_ROLE_OPTIONS = [
-  { id: 'NGO',                 label: 'NGO',                 icon: Heart,       color: 'text-blue-500',   desc: 'Organization' },
-  { id: 'ORPHANAGE',           label: 'Orphanage',           icon: Home,        color: 'text-orange-500', desc: 'Child welfare' },
-  { id: 'OLD_AGE_HOME',        label: 'Old Age Home',        icon: Building,    color: 'text-purple-500', desc: 'Senior care' },
-  { id: 'GOVERNMENT_HOSPITAL', label: 'Govt Hospital',       icon: PlusSquare,  color: 'text-red-500',    desc: 'Healthcare' },
+  { id: 'NGO',                 label: 'NGO',            icon: Heart,     color: 'text-blue-500',   desc: 'Organization' },
+  { id: 'ORPHANAGE',           label: 'Orphanage',      icon: Home,      color: 'text-orange-500', desc: 'Child welfare' },
+  { id: 'OLD_AGE_HOME',        label: 'Old Age Home',   icon: Building,  color: 'text-purple-500', desc: 'Senior care' },
+  { id: 'GOVERNMENT_HOSPITAL', label: 'Govt Hospital',  icon: PlusSquare,color: 'text-red-500',    desc: 'Healthcare' },
 ];
 
 // ============================================================
-// Field helper
+// Field helper (non-password)
 // ============================================================
 const renderField = (
   name: string,
@@ -58,6 +53,43 @@ const renderField = (
 );
 
 // ============================================================
+// Password field helper with show/hide toggle
+// ============================================================
+const renderPasswordField = (
+  name: string,
+  label: string,
+  required: boolean,
+  formData: any,
+  handleChange: any,
+  showPassword: boolean,
+  toggleShow: () => void,
+) => (
+  <div className="space-y-1.5" key={name}>
+    <label className="text-xs font-semibold text-foreground/80 ml-1">
+      {label} {required && <span className="text-destructive">*</span>}
+    </label>
+    <div className="relative">
+      <input
+        type={showPassword ? 'text' : 'password'}
+        name={name}
+        required={required}
+        value={formData[name] ?? ''}
+        onChange={handleChange}
+        className="block w-full rounded-xl border border-input bg-muted/30 pl-4 pr-10 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+      />
+      <button
+        type="button"
+        onClick={toggleShow}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
+      >
+        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  </div>
+);
+
+// ============================================================
 // Component
 // ============================================================
 export default function RegisterPage() {
@@ -68,10 +100,12 @@ export default function RegisterPage() {
   const [role, setRole] = useState<UserRole>('DONOR');
   const [error, setError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '', password: '', confirmPassword: '', phone_number: '',
-    // Donor-specific — FIXED: username added
+    // Donor-specific
     username: '',
     // Org fields
     organization_name: '', hospital_name: '', contact_person: '',
@@ -113,7 +147,6 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      // Build payload based on role
       const payload: any = {
         role,
         email: role === 'GOVERNMENT_HOSPITAL'
@@ -129,7 +162,6 @@ export default function RegisterPage() {
       };
 
       if (isDonor) {
-        // FIXED: all donor types use username field
         payload.username = formData.username;
         payload.full_name = formData.username; // sync for display compatibility
       }
@@ -177,7 +209,6 @@ export default function RegisterPage() {
           description: formData.description,
         });
       } else if (role === 'GOVERNMENT_HOSPITAL') {
-        // FIXED: hospital_name maps to organization_name; official_email as email
         Object.assign(payload, {
           organization_name: formData.hospital_name || formData.organization_name,
           hospital_name: formData.hospital_name,
@@ -195,16 +226,12 @@ export default function RegisterPage() {
       const result = await register(payload);
 
       if (result?.pending) {
-        // FIXED: Receiver — show pending message, don't redirect to dashboard
         setPendingMessage(
           result.message ||
           'Registration successful! Your account is pending admin approval. You will be notified once approved.'
         );
-      } else {
-        // Donor — auto-approved, useAuthStore already redirected to dashboard
       }
     } catch (err: any) {
-      // FIXED: unified response format
       const data = err.response?.data;
       if (data?.errors) {
         const firstError = Object.values(data.errors)[0];
@@ -265,7 +292,7 @@ export default function RegisterPage() {
         <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
           <span className="text-orange-500">🍽️</span> I want to donate food
         </legend>
-        <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
+        <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
           {DONOR_ROLE_OPTIONS.map((r) => {
             const Icon = r.icon;
             return (
@@ -434,10 +461,10 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Password fields */}
+      {/* Password fields with show/hide toggles */}
       <div className="grid gap-4 md:grid-cols-2 mt-4 pt-4 border-t">
-        {renderField('password', 'Password', 'password', true, formData, handleChange)}
-        {renderField('confirmPassword', 'Confirm Password', 'password', true, formData, handleChange)}
+        {renderPasswordField('password', 'Password', true, formData, handleChange, showPassword, () => setShowPassword(v => !v))}
+        {renderPasswordField('confirmPassword', 'Confirm Password', true, formData, handleChange, showConfirmPassword, () => setShowConfirmPassword(v => !v))}
       </div>
       <p className="text-[11px] text-muted-foreground">
         Password must be at least 8 characters with one uppercase, one number, and one special character.

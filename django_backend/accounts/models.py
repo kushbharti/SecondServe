@@ -34,17 +34,11 @@ class CustomUserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    # --- FIXED: Expanded to all 10 roles as per spec ---
-    DONOR_ROLES = ('DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE')
+    DONOR_ROLES = ('DONOR',)
     RECEIVER_ROLES = ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL')
 
     ROLE_CHOICES = (
         ('DONOR', 'Donor'),
-        ('HOTEL', 'Hotel'),
-        ('CAFE', 'Cafe'),
-        ('RESTAURANT', 'Restaurant'),
-        ('CANTEEN', 'Canteen'),
-        ('CATERING_SERVICE', 'Catering Service'),
         ('NGO', 'NGO'),
         ('ORPHANAGE', 'Orphanage'),
         ('OLD_AGE_HOME', 'Old Age Home'),

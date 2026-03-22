@@ -1,9 +1,8 @@
-// FIXED: All 10 roles as per spec (6 donor + 4 receiver)
-export type DonorRole = 'DONOR' | 'HOTEL' | 'CAFE' | 'RESTAURANT' | 'CANTEEN' | 'CATERING_SERVICE';
+export type DonorRole = 'DONOR';
 export type ReceiverRole = 'NGO' | 'ORPHANAGE' | 'OLD_AGE_HOME' | 'GOVERNMENT_HOSPITAL';
-export type UserRole = DonorRole | ReceiverRole;
+export type UserRole = DonorRole | ReceiverRole | 'admin';
 
-export const DONOR_ROLES: DonorRole[] = ['DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE'];
+export const DONOR_ROLES: DonorRole[] = ['DONOR'];
 export const RECEIVER_ROLES: ReceiverRole[] = ['NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL'];
 
 export function isDonorRole(role: string): role is DonorRole {

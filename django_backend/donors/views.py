@@ -7,6 +7,7 @@ from django.db import transaction
 from .models import FoodListing, FoodPost
 from .serializers import FoodListingSerializer, FoodPostSerializer
 from accounts.permissions import IsDonor, IsAdmin
+from backend.cache import cache_service
 
 
 def success_response(data, message="Success", status_code=status.HTTP_200_OK):
@@ -58,18 +59,31 @@ class FoodPostViewSet(viewsets.ModelViewSet):
             # FIX: Check is_authenticated first to avoid AnonymousUser.is_donor crash
             if user.is_authenticated and getattr(user, 'is_donor', False):
                 return base_qs.filter(donor=user)
-            return base_qs.filter(status='available')
+            from django.utils import timezone
+            return base_qs.filter(status='available', expiry_time__gt=timezone.now())
 
         return base_qs
 
     def perform_create(self, serializer):
         serializer.save(donor=self.request.user)
+        cache_service.invalidate('food_posts:available')
 
     def list(self, request, *args, **kwargs):
+        user = self.request.user
+        if not user.is_authenticated or not getattr(user, 'is_donor', False):
+            # Public view — cache heavily
+            data = cache_service.get_or_set(
+                'food_posts:available',
+                lambda: FoodPostSerializer(self.get_queryset(), many=True).data,
+                ttl=60
+            )
+            return success_response(data=data, message="Food posts retrieved.")
+            
+        # Donor-specific view — no global cache
         qs = self.get_queryset()
         return success_response(
             data=FoodPostSerializer(qs, many=True).data,
-            message="Food posts retrieved.",
+            message="Your food posts retrieved.",
         )
 
     def retrieve(self, request, *args, **kwargs):
@@ -102,6 +116,7 @@ class FoodPostViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return error_response(message="Update failed.", errors=serializer.errors)
         serializer.save()
+        cache_service.invalidate('food_posts:available')
         return success_response(data=serializer.data, message="Food post updated.")
 
     def destroy(self, request, *args, **kwargs):
@@ -109,6 +124,7 @@ class FoodPostViewSet(viewsets.ModelViewSet):
         if instance.donor != request.user:
             return error_response("You can only delete your own food posts.", status_code=403)
         instance.delete()
+        cache_service.invalidate('food_posts:available')
         return success_response(data={}, message="Food post deleted.")
 
 
@@ -152,6 +168,7 @@ class FoodListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, listing_type='donation')
+        cache_service.invalidate('available_listings')
 
     @action(detail=True, methods=['patch'])
     def status(self, request, pk=None):
@@ -161,6 +178,8 @@ class FoodListingViewSet(viewsets.ModelViewSet):
             return error_response(message='Invalid status', status_code=status.HTTP_400_BAD_REQUEST)
         listing.status = new_status
         listing.save(update_fields=['status', 'updated_at'])
+        cache_service.invalidate('available_listings')
+        cache_service.invalidate('food_requests:open')
         return success_response(data=FoodListingSerializer(listing).data, message='Status updated successfully')
 
 
@@ -170,18 +189,20 @@ class AvailableRequestsView(generics.ListAPIView):
 
     def get_queryset(self):
         # FIX: select_related prevents N+1 on author lookup in serializer
+        from django.utils import timezone
         return FoodListing.objects.select_related(
             'author', 'matched_user'
         ).filter(
-            status='available', listing_type='request'
+            status='available', listing_type='request', expiry_date__gt=timezone.now()
         ).order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        return success_response(
-            data=FoodListingSerializer(qs, many=True).data,
-            message="Available requests retrieved."
+        data = cache_service.get_or_set(
+            'food_requests:open',
+            lambda: FoodListingSerializer(self.get_queryset(), many=True).data,
+            ttl=60
         )
+        return success_response(data=data, message="Available requests retrieved.")
 
 
 class AcceptRequestView(APIView):
@@ -202,4 +223,5 @@ class AcceptRequestView(APIView):
         listing.matched_user = request.user
         listing.status = 'assigned'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
+        cache_service.invalidate('food_requests:open')
         return success_response(data=FoodListingSerializer(listing).data, message='Request accepted successfully')

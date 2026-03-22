@@ -11,10 +11,10 @@ interface AuthState {
   isAuthenticated: boolean;
   register: (input: {
     role: UserRole;
-    name: string;
+    full_name?: string;
     email: string;
-    phone: string;
-    organizationName?: string;
+    phone_number?: string;
+    organization_name?: string;
   }) => void;
   loginWithEmail: (email: string) => void;
   loginAsSample: (role: UserRole) => void;
@@ -31,11 +31,11 @@ export const useAuthStore = create<AuthState>()(
         const user: User = {
           id: `user-${Date.now()}`,
           role: input.role,
-          name: input.name,
+          full_name: input.full_name,
           email: input.email,
-          phone: input.phone,
-          organizationName: input.organizationName,
-          createdAt: new Date().toISOString()
+          phone_number: input.phone_number,
+          organization_name: input.organization_name,
+          date_joined: new Date().toISOString()
         };
         set({
           user,

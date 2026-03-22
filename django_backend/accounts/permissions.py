@@ -1,16 +1,13 @@
 from rest_framework import permissions
 
 
-# FIXED: All 6 donor roles, not just 'donor'
-DONOR_ROLES = ('DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE')
-# FIXED: All 4 receiver roles with correct uppercase slugs
+DONOR_ROLES = ('DONOR',)
 RECEIVER_ROLES = ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL')
 
 
 class IsDonor(permissions.BasePermission):
     """
-    Allows access to any authenticated user with a donor role.
-    Covers all 6 donor types: DONOR, HOTEL, CAFE, RESTAURANT, CANTEEN, CATERING_SERVICE
+    Allows access to authenticated users with the DONOR role.
     """
     message = "Access restricted to donor accounts only."
 

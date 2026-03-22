@@ -1,34 +1,54 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useListings } from '@/hooks/useListings';
-import { useAuth } from '@/hooks/useAuth';
-import { Calendar, MapPin, Package, CheckCircle2, Clock, ChevronRight, AlertCircle, ArrowRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { Calendar, MapPin, Package, CheckCircle2, Clock, ChevronRight, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { recipientApi } from '@/lib/recipient';
+import type { FoodListing } from '@/lib/donor';
 
 export function FoodHistory() {
-  const { listings } = useListings();
-  const { user } = useAuth();
+  const [claims, setClaims] = useState<FoodListing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
-  const allClaims = useMemo(() => {
-    if (!user) return [];
-    return listings
-      .filter(l => l.claimedByRecipientId === user.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [listings, user]);
+  useEffect(() => {
+    async function fetchClaims() {
+      try {
+        const data = await recipientApi.getAcceptedDonations();
+        setClaims(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Failed to load food claims:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    if (user) {
+      fetchClaims();
+    }
+  }, [user]);
 
   const activeClaims = useMemo(() => 
-    allClaims.filter(l => ['claimed', 'picked_up'].includes(l.status)),
-  [allClaims]);
+    claims.filter(l => l.status === 'assigned'),
+  [claims]);
 
   const pastClaims = useMemo(() => 
-    allClaims.filter(l => ['delivered', 'cancelled', 'expired'].includes(l.status)),
-  [allClaims]);
+    claims.filter(l => l.status === 'completed' || l.status === 'available'), // 'available' would mean cancelled by them, though the backend removes their matched_user so they might not even see it.
+  [claims]);
 
   const displayList = activeTab === 'active' ? activeClaims : pastClaims;
 
-  if (allClaims.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="py-24 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (claims.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed bg-muted/30 p-12 text-center animate-fade-in">
         <div className="rounded-full bg-primary/10 p-4 mb-4">
@@ -96,11 +116,11 @@ export function FoodHistory() {
                 {/* Image Placeholder or Status Icon */}
                 <div className="shrink-0">
                   <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-2xl ${
-                    item.status === 'delivered' ? 'bg-emerald-100 text-emerald-600' :
-                    item.status === 'claimed' ? 'bg-blue-100 text-blue-600' :
+                    item.status === 'completed' ? 'bg-emerald-100 text-emerald-600' :
+                    item.status === 'assigned' ? 'bg-blue-100 text-blue-600' :
                     'bg-gray-100 text-gray-500'
                   }`}>
-                    {item.status === 'delivered' ? <CheckCircle2 /> : <Package />}
+                    {item.status === 'completed' ? <CheckCircle2 /> : <Package />}
                   </div>
                 </div>
 
@@ -113,7 +133,7 @@ export function FoodHistory() {
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
                         <span>
-                          {new Date(item.createdAt).toLocaleDateString(undefined, {
+                          {new Date(item.created_at).toLocaleDateString(undefined, {
                             month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric'
                           })}
                         </span>
@@ -124,31 +144,48 @@ export function FoodHistory() {
 
                   <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary/50" />
-                      <span className="font-medium text-foreground">{item.quantity}</span> lbs
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <div className="h-1.5 w-1.5 rounded-full bg-primary/50" />
-                      <span className="font-medium text-foreground">{item.estimatedMeals}</span> meals
+                       <Package className="h-4 w-4 text-primary/70" />
+                      <span className="font-medium text-foreground">{item.quantity}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary/70" />
-                      <span className="truncate max-w-[200px]">{item.pickupLocation.address}</span>
+                      <span className="truncate max-w-[200px]">{item.pickup_address || 'Address provided upon acceptance'}</span>
                     </div>
                   </div>
 
                   {activeTab === 'active' && (
-                    <div className="mt-4 pt-4 border-t border-dashed flex items-center justify-between">
+                    <div className="mt-4 pt-4 border-t border-dashed flex items-baseline justify-between">
                         <p className="text-xs font-medium text-primary flex items-center gap-1.5">
                            <AlertCircle className="h-3.5 w-3.5" />
                            Awaiting pickup
                         </p>
-                       <Link 
-                          href={`/recipient/listings/${item.id}`}
-                          className="text-xs font-semibold hover:underline flex items-center gap-1"
-                       >
-                          View Details <ChevronRight className="h-3 w-3" />
-                       </Link>
+                    </div>
+                  )}
+
+                  {/* Show Donor Contact Info when active */}
+                  {activeTab === 'active' && (
+                    <div className="mt-3 p-3 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-1.5 animate-in fade-in duration-300">
+                      <p className="text-xs font-semibold text-orange-900 mb-1">Pickup contact:</p>
+                      {item.author_name && (
+                        <p className="text-xs text-orange-800 flex items-center gap-2">
+                           <span className="font-medium text-orange-900 w-12">Name:</span> {item.author_name}
+                        </p>
+                      )}
+                      {item.author_phone && (
+                        <p className="text-xs text-orange-800 flex items-center gap-2">
+                           <span className="font-medium text-orange-900 w-12">Phone:</span> 
+                           <a href={`tel:${item.author_phone}`} className="hover:underline">{item.author_phone}</a>
+                        </p>
+                      )}
+                      {item.author_email && (
+                        <p className="text-xs text-orange-800 flex items-center gap-2">
+                           <span className="font-medium text-orange-900 w-12">Email:</span> 
+                           <a href={`mailto:${item.author_email}`} className="hover:underline">{item.author_email}</a>
+                        </p>
+                      )}
+                      {(!item.author_phone && !item.author_email) && (
+                        <p className="text-xs text-orange-800/70 italic">Details will be shared directly by donor.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -163,10 +200,9 @@ export function FoodHistory() {
 
 function StatusBadge({ status }: { status: string }) {
   const styles = {
-    active: 'bg-green-100 text-green-700 ring-green-600/20',
-    claimed: 'bg-blue-100 text-blue-700 ring-blue-600/20',
-    picked_up: 'bg-yellow-100 text-yellow-700 ring-yellow-600/20',
-    delivered: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
+    available: 'bg-green-100 text-green-700 ring-green-600/20',
+    assigned: 'bg-blue-100 text-blue-700 ring-blue-600/20',
+    completed: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',
     cancelled: 'bg-red-50 text-red-700 ring-red-600/10',
     expired: 'bg-gray-100 text-gray-700 ring-gray-600/10',
   };

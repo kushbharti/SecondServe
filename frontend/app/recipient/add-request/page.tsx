@@ -78,12 +78,12 @@ export default function AddRequestPage() {
     }
   };
 
-  const role = user?.role || 'ngo';
+  const role = user?.role || 'NGO';
   const roleLabels: Record<string, string> = {
-      ngo: 'NGO',
-      orphanage: 'Orphanage',
-      old_age_home: 'Old Age Home',
-      hospital: 'Hospital'
+      NGO: 'NGO',
+      ORPHANAGE: 'Orphanage',
+      OLD_AGE_HOME: 'Old Age Home',
+      GOVERNMENT_HOSPITAL: 'Hospital'
   };
 
   return (
@@ -91,7 +91,7 @@ export default function AddRequestPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{roleLabels[role] || 'Recipient'} Food Request</h1>
         <p className="text-muted-foreground">
-          {role === 'hospital' 
+          {role === 'GOVERNMENT_HOSPITAL' 
             ? 'Coordinate patient and staff meal requirements. Please specify dietary constraints if any.'
             : 'Let donors know what your organization needs. Please be specific about food types and quantities.'}
         </p>
@@ -110,7 +110,7 @@ export default function AddRequestPage() {
               value={formData.title}
               onChange={handleChange}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder={role === 'hospital' ? 'e.g. Diabetic Meals for 20 Patients' : 'e.g. Needed: 50 Rice Bags for Shelter'}
+              placeholder={role === 'GOVERNMENT_HOSPITAL' ? 'e.g. Diabetic Meals for 20 Patients' : 'e.g. Needed: 50 Rice Bags for Shelter'}
             />
           </div>
           

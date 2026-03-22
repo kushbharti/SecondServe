@@ -61,8 +61,8 @@ export function ProfileManagement() {
     setIsEditing(false);
   };
 
-  const isHospital = user.role === 'hospital';
-  const isOrg = ['ngo', 'orphanage', 'old_age_home'].includes(user.role);
+  const isHospital = user.role === 'GOVERNMENT_HOSPITAL';
+  const isOrg = ['NGO', 'ORPHANAGE', 'OLD_AGE_HOME'].includes(user.role);
 
   return (
     <div className="space-y-4">

@@ -44,9 +44,9 @@ api.interceptors.response.use(
 
         const { access } = response.data;
 
-        // FIX: Preserve role-aware expiry — donors get 7 days, receivers 1 day
+        // Only DONOR role gets 7-day expiry; receivers get 1 day
         const role = Cookies.get('role') || '';
-        const DONOR_ROLES = ['DONOR', 'HOTEL', 'CAFE', 'RESTAURANT', 'CANTEEN', 'CATERING_SERVICE'];
+        const DONOR_ROLES = ['DONOR'];
         const accessExpiry = DONOR_ROLES.includes(role) ? 7 : 1;
         Cookies.set('accessToken', access, { expires: accessExpiry, sameSite: 'Lax' });
 
