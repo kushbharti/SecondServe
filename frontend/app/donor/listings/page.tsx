@@ -20,10 +20,12 @@ export default function ManageListingsPage() {
   const [listings, setListings] = useState<FoodListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchListings = async () => {
+    setIsLoading(true);
     try {
-      const data = await donorApi.getListings();
+      const data = await donorApi.getListings(statusFilter);
       setListings(data);
     } catch (error) {
       console.error('Failed to fetch listings:', error);
@@ -34,7 +36,7 @@ export default function ManageListingsPage() {
 
   useEffect(() => {
     fetchListings();
-  }, []);
+  }, [statusFilter]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this listing?')) return;
@@ -98,10 +100,16 @@ export default function ManageListingsPage() {
             className="pl-9 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </div>
-        {/* <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted transition-colors text-sm font-medium">
-          <Filter className="h-4 w-4" />
-          Filter
-        </button> */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-primary h-[40px] cursor-pointer"
+        >
+          <option value="all">All Statuses</option>
+          <option value="available">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="expired">Expired</option>
+        </select>
       </div>
 
       {/* Listings Table */}
@@ -129,8 +137,16 @@ export default function ManageListingsPage() {
                     <tr key={item.id} className="group hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-orange-100/50 flex items-center justify-center shrink-0">
-                            <Package className="h-5 w-5 text-orange-600" />
+                        <div className="h-10 w-10 rounded-lg bg-orange-100/50 flex items-center justify-center shrink-0 overflow-hidden border">
+                            {item.image ? (
+                                <img 
+                                  src={item.image.startsWith('http') ? item.image : `http://localhost:8000${item.image}`} 
+                                  alt={item.title || item.food_type} 
+                                  className="h-full w-full object-cover" 
+                                />
+                            ) : (
+                                <Package className="h-5 w-5 text-orange-600" />
+                            )}
                         </div>
                         <div>
                             <div className="font-medium text-foreground">{item.title}</div>
@@ -143,13 +159,15 @@ export default function ManageListingsPage() {
                     </td>
                     <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        item.status === 'available' ? 'bg-green-50 text-green-700 border-green-200' :
-                        item.status === 'assigned' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        'bg-gray-50 text-gray-700 border-gray-200'
+                          item.status === 'available' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                          item.status === 'expired' ? 'bg-red-50 text-red-800 border-red-200' :
+                          'bg-green-50 text-green-800 border-green-200'
                         }`}>
-                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                           {item.status === 'available' ? 'Pending' :
+                            item.status === 'expired' ? 'Expired' :
+                            item.status === 'completed' ? 'Completed' : item.status}
                         </span>
-                        {item.status === 'assigned' && item.matched_user_name && (
+                        {item.status === 'completed' && item.matched_user_name && (
                             <div className="mt-2 text-xs text-blue-800">
                                 <div>Pickup: <strong>{item.matched_user_name}</strong></div>
                                 {item.matched_user_phone && <div>📞 {item.matched_user_phone}</div>}

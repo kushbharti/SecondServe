@@ -34,6 +34,7 @@ def make_receiver(**kwargs):
         'password': 'Secure1!',
         'role': 'NGO',
         'verification_status': 'approved',
+        'registration_number': 'REG123',
     }
     defaults.update(kwargs)
     return User.objects.create_user(**defaults)
@@ -60,6 +61,8 @@ class AvailableListingsTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'ngo@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         self.token = res.json()['data']['access']
 
@@ -95,6 +98,8 @@ class AcceptDonationTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'ngo@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         self.token = res.json()['data']['access']
 
@@ -137,6 +142,8 @@ class CompleteListingTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'ngo@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         self.token = res.json()['data']['access']
 
@@ -152,6 +159,8 @@ class CompleteListingTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'other@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         token = res.json()['data']['access']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
@@ -181,6 +190,8 @@ class CancelDonationTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'ngo@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         self.token = res.json()['data']['access']
 

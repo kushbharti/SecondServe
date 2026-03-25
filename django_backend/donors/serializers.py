@@ -21,6 +21,30 @@ class FoodListingSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('author', 'created_at', 'updated_at', 'status', 'matched_user', 'listing_type')
 
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # Check for expiry dynamically
+        from django.utils import timezone
+        if instance.expiry_date and instance.expiry_date < timezone.now() and rep['status'] == 'available':
+            rep['status'] = 'expired'
+
+        # Build absolute image URL
+        if rep.get('image'):
+            request = self.context.get('request')
+            if request:
+                path = rep['image']
+                if not path.startswith('http'):
+                    rep['image'] = request.build_absolute_uri(path)
+            else:
+                from django.conf import settings as _settings
+                backend_url = getattr(_settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+                path = rep['image']
+                if not path.startswith('http'):
+                    rep['image'] = f"{backend_url}{path}" if path.startswith('/') else f"{backend_url}/media/{path}"
+
+        return rep
+
+
     def get_author_name(self, obj):
         user = obj.author
         if user.role == 'GOVERNMENT_HOSPITAL':
@@ -62,6 +86,13 @@ class FoodPostSerializer(serializers.ModelSerializer):
             'status', 'description', 'created_at',
         ]
         read_only_fields = ('id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email', 'created_at', 'status')
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        from django.utils import timezone
+        if instance.expiry_time and instance.expiry_time < timezone.now() and rep['status'] == 'available':
+            rep['status'] = 'expired'
+        return rep
 
     def get_donor_name(self, obj):
         user = obj.donor

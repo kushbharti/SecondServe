@@ -43,6 +43,11 @@ export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  const displayName = user ? (user.contact_person || user.organization_name || user.hospital_name || user.full_name || "User") : "User";
+  const displayInitials = displayName.charAt(0).toUpperCase();
+  const shortName = displayName.split(" ")[0];
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -164,12 +169,12 @@ export function Navbar() {
                         {user.profile_image ? (
                           <img
                             src={user.profile_image}
-                            alt={user.full_name}
+                            alt={displayName}
                             className="h-full w-full object-cover"
                           />
                         ) : (
                           <span className="text-primary font-bold text-sm">
-                            {user?.full_name?.charAt(0)?.toUpperCase()}
+                            {displayInitials}
                           </span>
                         )}
                       </div>
@@ -179,7 +184,7 @@ export function Navbar() {
 
                   <div className="flex flex-col items-start hidden md:flex">
                     <span className="text-sm font-semibold leading-none text-foreground">
-                      {user?.full_name?.split(" ")?.[0] || "User"}
+                      {shortName}
                     </span>
                     <span className="text-[10px] font-medium text-muted-foreground capitalize leading-none mt-1">
                       {user.role}
@@ -200,7 +205,7 @@ export function Navbar() {
                 >
                   <div className="px-4 py-4 mb-2 bg-muted/50 rounded-2xl border border-border/50">
                     <p className="font-bold text-foreground truncate">
-                      {user.full_name}
+                      {displayName}
                     </p>
                     <p className="text-xs text-muted-foreground truncate font-medium">
                       {user.email}
@@ -300,19 +305,19 @@ export function Navbar() {
                     {user.profile_image ? (
                       <img
                         src={user.profile_image}
-                        alt={user.full_name}
+                        alt={displayName}
                         className="h-full w-full object-cover"
                       />
                     ) : (
                       <span className="text-xl font-bold text-primary">
-                        {user?.full_name?.[0]?.toUpperCase() || "U"}
+                        {displayInitials}
                       </span>
                     )}
                   </div>
                 </div>
                 <div>
                   <p className="font-bold text-lg text-foreground">
-                    {user.full_name}
+                    {displayName}
                   </p>
                   <p className="text-sm text-muted-foreground capitalize font-medium">
                     {user.role}

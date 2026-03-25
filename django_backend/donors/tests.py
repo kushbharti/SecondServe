@@ -35,6 +35,7 @@ def make_receiver(**kwargs):
         'password': 'Secure1!',
         'role': 'NGO',
         'verification_status': 'approved',
+        'registration_number': 'REG123',
     }
     defaults.update(kwargs)
     return User.objects.create_user(**defaults)
@@ -49,6 +50,7 @@ class FoodListingViewSetTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'donor@example.com',
             'password': 'Secure1!',
+            'role': 'DONOR'
         }, format='json')
         self.token = res.json()['data']['access']
         self.auth_header = {'HTTP_AUTHORIZATION': f'Bearer {self.token}'}
@@ -84,6 +86,8 @@ class FoodListingViewSetTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'ngo2@example.com',
             'password': 'Secure1!',
+            'role': 'NGO',
+            'registration_number': 'REG123',
         }, format='json')
         token = res.json()['data']['access']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
@@ -151,6 +155,7 @@ class AcceptRequestTest(TestCase):
         res = self.client.post(LOGIN_URL, {
             'email': 'donor@example.com',
             'password': 'Secure1!',
+            'role': 'DONOR'
         }, format='json')
         self.token = res.json()['data']['access']
 

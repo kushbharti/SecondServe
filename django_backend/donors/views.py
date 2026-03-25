@@ -56,10 +56,18 @@ class FoodPostViewSet(viewsets.ModelViewSet):
         base_qs = FoodPost.objects.select_related('donor').order_by('-created_at')
 
         if self.action == 'list':
-            # FIX: Check is_authenticated first to avoid AnonymousUser.is_donor crash
-            if user.is_authenticated and getattr(user, 'is_donor', False):
-                return base_qs.filter(donor=user)
             from django.utils import timezone
+            if user.is_authenticated and getattr(user, 'is_donor', False):
+                qs = base_qs.filter(donor=user)
+                status_filter = self.request.query_params.get('status')
+                if status_filter:
+                    if status_filter == 'expired':
+                        qs = qs.filter(expiry_time__lt=timezone.now()).exclude(status='completed')
+                    elif status_filter == 'available':
+                        qs = qs.filter(expiry_time__gte=timezone.now(), status='available')
+                    else:
+                        qs = qs.filter(status=status_filter)
+                return qs
             return base_qs.filter(status='available', expiry_time__gt=timezone.now())
 
         return base_qs
@@ -159,12 +167,22 @@ class FoodListingViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        # FIX: select_related eliminates N+1 queries when serializing author + matched_user
-        return FoodListing.objects.select_related(
+        qs = FoodListing.objects.select_related(
             'author', 'matched_user'
         ).filter(
             author=self.request.user, listing_type='donation'
         ).order_by('-created_at')
+        
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            from django.utils import timezone
+            if status_filter == 'expired':
+                qs = qs.filter(expiry_date__lt=timezone.now()).exclude(status='completed')
+            elif status_filter == 'available':
+                qs = qs.filter(expiry_date__gte=timezone.now(), status='available')
+            else:
+                qs = qs.filter(status=status_filter)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, listing_type='donation')
@@ -221,7 +239,7 @@ class AcceptRequestView(APIView):
             return error_response(message='Request is not available', status_code=status.HTTP_400_BAD_REQUEST)
 
         listing.matched_user = request.user
-        listing.status = 'assigned'
+        listing.status = 'completed'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
         cache_service.invalidate('food_requests:open')
         return success_response(data=FoodListingSerializer(listing).data, message='Request accepted successfully')

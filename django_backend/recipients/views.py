@@ -175,7 +175,7 @@ class RequestListingView(APIView):
         if listing.status != 'available':
             return error_response(message='Listing is not available', status_code=status.HTTP_400_BAD_REQUEST)
         listing.matched_user = request.user
-        listing.status = 'assigned'
+        listing.status = 'completed'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
         cache_service.invalidate('available_listings')
         return success_response(data=FoodListingSerializer(listing).data, message="Listing accepted successfully")
@@ -186,11 +186,22 @@ class MyRequestsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsReceiver]
 
     def get_queryset(self):
-        return FoodListing.objects.select_related(
+        qs = FoodListing.objects.select_related(
             'author', 'matched_user'
         ).filter(
             matched_user=self.request.user, listing_type='donation'
         ).order_by('-updated_at')
+        
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            from django.utils import timezone
+            if status_filter == 'expired':
+                qs = qs.filter(expiry_date__lt=timezone.now()).exclude(status='completed')
+            elif status_filter == 'available':
+                qs = qs.filter(expiry_date__gte=timezone.now(), status='available')
+            else:
+                qs = qs.filter(status=status_filter)
+        return qs
 
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()

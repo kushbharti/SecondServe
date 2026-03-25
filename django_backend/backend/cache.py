@@ -56,18 +56,22 @@ class CacheService:
         """
         Return cached value if present; otherwise call db_callable(),
         cache the result, and return it.
-        Falls back gracefully if cache raises any exception.
+        Raises exceptions if Redis is down (IGNORE_EXCEPTIONS=False in settings).
         """
         try:
             value = cache.get(key)
             if value is not None:
+                logger.debug('[Redis HIT] key=%s', key)
                 return value
+            logger.debug('[Redis MISS] key=%s — fetching from DB', key)
             value = db_callable()
             cache.set(key, value, timeout=ttl)
+            logger.debug('[Redis SET] key=%s ttl=%ds', key, ttl)
             return value
         except Exception as exc:  # noqa: BLE001
-            logger.warning('Cache get_or_set failed for key %s: %s', key, exc)
+            logger.error('[Redis ERROR] get_or_set failed for key=%s: %s', key, exc)
             return db_callable()
+
 
     def get(self, key: str):
         """Get a single cache value. Returns None on miss or error."""

@@ -33,7 +33,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-from donors.views import AdminFoodPostsView
+from donors.views import AdminFoodPostsView, FoodPostViewSet
 from recipients.views import AdminFoodRequestsView
 
 urlpatterns = [
@@ -44,6 +44,9 @@ urlpatterns = [
 
     # Donor routes: /api/donor/listings/, /api/donor/posts/, etc.
     path('api/donor/', include('donors.urls')),
+
+    # Public food posts list (unauthenticated)
+    path('api/food-posts/', FoodPostViewSet.as_view({'get': 'list'}), name='public-food-posts'),
 
     # Recipient routes: /api/recipient/requests/, /api/recipient/food-requests/, etc.
     path('api/recipient/', include('recipients.urls')),

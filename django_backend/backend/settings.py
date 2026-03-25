@@ -99,30 +99,46 @@ DATABASES = {
 }
 
 
-# Redis Cache
-# FIX: Caching layer — falls back to LocMemCache if Redis is not configured
+import logging as _logging
+
+# ---------------------------------------------------------------------------
+# Redis Cloud Cache — MANDATORY
+# ---------------------------------------------------------------------------
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-if REDIS_URL:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': REDIS_URL,
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
-            'KEY_PREFIX': 'secondserve',
-            'TIMEOUT': 300,  # default 5 min
-        }
+if not REDIS_URL:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Please configure a Redis Cloud connection string in your .env file.\n"
+        "Format: redis://username:password@host:port\n"
+        "Get one free at https://redis.io/try-free/"
+    )
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            # Fail fast on bad connection so we know Redis is down
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'IGNORE_EXCEPTIONS': False,  # Surface errors explicitly
+        },
+        'KEY_PREFIX': 'secondserve',
+        'TIMEOUT': 300,  # default TTL: 5 min
     }
-else:
-    # Fallback: in-process memory cache (no Redis needed locally)
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'secondserve-local',
-        }
-    }
+}
+
+# Confirm Redis Cloud is active at startup
+_logging.basicConfig(level=_logging.INFO)
+_logging.getLogger('django').info(
+    "[Redis Cloud] Cache backend: django_redis.cache.RedisCache | Location: %s",
+    REDIS_URL.split('@')[-1] if '@' in REDIS_URL else REDIS_URL,  # hide credentials in logs
+)
+
+# Backend base URL — used to build absolute media/image URLs in serializers
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
 
 
 # Password validation

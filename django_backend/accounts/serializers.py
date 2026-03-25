@@ -289,3 +289,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'verification_status', 'date_joined',
         ]
         read_only_fields = ['email', 'role', 'date_joined', 'verification_status']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # Build absolute image URL so it works from cached results and direct responses.
+        # Priority: request context (DRF default) → BACKEND_URL env var → relative path.
+        if rep.get('profile_image'):
+            request = self.context.get('request')
+            if request:
+                # DRF's request.build_absolute_uri builds correctly from the request host
+                path = rep['profile_image']
+                if not path.startswith('http'):
+                    rep['profile_image'] = request.build_absolute_uri(path)
+            else:
+                # No request context (e.g. called from cache lambda)
+                from django.conf import settings as _settings
+                backend_url = getattr(_settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+                path = rep['profile_image']
+                if not path.startswith('http'):
+                    # path is already like "/media/..." since DRF ImageField gives relative path
+                    rep['profile_image'] = f"{backend_url}{path}" if path.startswith('/') else f"{backend_url}/media/{path}"
+        return rep

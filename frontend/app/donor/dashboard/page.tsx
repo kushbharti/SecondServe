@@ -227,11 +227,15 @@ export default function DonorDashboardPage() {
                     </div>
                   </div>
                   <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                    listing.status === 'available' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                    listing.status === 'assigned' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                    'bg-gray-50 text-gray-700 ring-gray-600/20'
+                    listing.status === 'available' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' :
+                    listing.status === 'assigned' ? 'bg-green-50 text-green-800 ring-green-600/20' :
+                    listing.status === 'expired' ? 'bg-red-50 text-red-800 ring-red-600/20' :
+                    'bg-blue-50 text-blue-800 ring-blue-600/20'
                   }`}>
-                    {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                    {listing.status === 'available' ? 'Pending' :
+                     listing.status === 'assigned' ? 'Accepted' :
+                     listing.status === 'expired' ? 'Expired' :
+                     'Completed'}
                   </span>
                 </div>
               ))

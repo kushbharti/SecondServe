@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Mail, Phone, Building, Edit2, Save, X, Globe } from 'lucide-react';
+import { User, Mail, Phone, Building, Edit2, Save, X, Globe, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 
 export function ProfileManagement() {
   const { user, checkAuth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     organization_name: user?.organization_name || '',
@@ -22,6 +27,24 @@ export function ProfileManagement() {
     cci_registration_number: user?.cci_registration_number || '',
   });
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        full_name: user.full_name || '',
+        organization_name: user.organization_name || '',
+        hospital_name: user.hospital_name || '',
+        contact_person: user.contact_person || '',
+        email: user.email || '',
+        phone_number: user.phone_number || '',
+        address: user.address || '',
+        website_url: user.website_url || '',
+        description: user.description || '',
+        registration_number: user.registration_number || '',
+        cci_registration_number: user.cci_registration_number || '',
+      });
+    }
+  }, [user]);
+
   if (!user) {
     return (
       <div className="rounded-2xl border border-dashed bg-card/50 p-8 text-center">
@@ -34,13 +57,19 @@ export function ProfileManagement() {
   }
 
   const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
     try {
-        await api.put('/auth/profile/update/', formData);
-        await checkAuth(); // Refresh user data
+        await api.patch('/auth/profile/update/', formData);
+        await checkAuth();
         setIsEditing(false);
-    } catch (error) {
-        console.error("Failed to update profile", error);
-        alert("Failed to update profile");
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+        setSaveError('Failed to update profile. Please try again.');
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -85,40 +114,54 @@ export function ProfileManagement() {
           <div className="flex gap-2">
             <button
               onClick={handleCancel}
-              className="inline-flex items-center gap-2 rounded-full border border-muted-foreground/20 bg-white px-4 py-2 text-sm font-semibold text-muted-foreground shadow-sm transition-smooth hover:bg-muted hover-lift"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-full border border-muted-foreground/20 bg-white px-4 py-2 text-sm font-semibold text-muted-foreground shadow-sm transition-smooth hover:bg-muted hover-lift disabled:opacity-50"
             >
               <X className="h-4 w-4" />
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-smooth hover:bg-primary/90 hover-lift"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-smooth hover:bg-primary/90 hover-lift disabled:opacity-50"
             >
-              <Save className="h-4 w-4" />
-              Save Changes
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
       </div>
 
       <div className="rounded-2xl border bg-card p-6 shadow-sm">
+        {/* Feedback Messages */}
+        {saveError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {saveError}
+          </div>
+        )}
+        {saveSuccess && (
+          <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            Profile updated successfully!
+          </div>
+        )}
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary overflow-hidden">
-              {user.profile_image ? (
+              {user.profile_image && !imgError ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.profile_image}
-                  alt={user.full_name}
+                  alt={user.full_name || user.organization_name || 'Profile'}
                   className="h-full w-full object-cover"
+                  onError={() => setImgError(true)}
                 />
               ) : (
-                (user.organization_name || user.hospital_name || user.full_name || '?').charAt(0).toUpperCase()
+                (user.organization_name || user.hospital_name || user.username || user.full_name || '?').charAt(0).toUpperCase()
               )}
             </div>
             <div>
-              <p className="font-semibold">{user.organization_name || user.hospital_name || user.full_name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user.role.replace('_', ' ')}</p>
+              <p className="font-semibold">{user.organization_name || user.hospital_name || user.username || user.full_name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user.role.replace(/_/g, ' ')}</p>
             </div>
           </div>
 

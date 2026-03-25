@@ -13,8 +13,9 @@ export const recipientApi = {
         return response.data?.data ?? response.data;
     },
 
-    getAcceptedDonations: async () => {
-        const response = await api.get('/recipient/my-requests/');
+    getAcceptedDonations: async (status?: string) => {
+        const url = status && status !== 'all' ? `/recipient/my-requests/?status=${status}` : '/recipient/my-requests/';
+        const response = await api.get(url);
         return response.data?.data ?? response.data;
     },
 

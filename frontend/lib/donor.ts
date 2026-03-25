@@ -8,7 +8,7 @@ export interface FoodListing {
     quantity: string;
     pickup_address: string;
     expiry_date: string;
-    status: 'available' | 'assigned' | 'completed';
+    status: 'available' | 'assigned' | 'completed' | 'expired';
     listing_type: 'donation' | 'request';
     created_at: string;
     updated_at?: string;
@@ -25,8 +25,9 @@ export interface FoodListing {
 }
 
 export const donorApi = {
-    getListings: async () => {
-        const response = await api.get('/donor/listings/');
+    getListings: async (status?: string) => {
+        const url = status && status !== 'all' ? `/donor/listings/?status=${status}` : '/donor/listings/';
+        const response = await api.get(url);
         return response.data?.data ?? response.data;
     },
 
