@@ -16,7 +16,7 @@ const features = [
   {
     icon: Users,
     title: 'Collaborative Network',
-    description: 'Build a network of donors, recipients, and drivers working together to make a meaningful difference.',
+    description: 'Build a network of donors and recipients working together to make a meaningful difference.',
     color: 'text-blue-500'
   },
   {
@@ -41,7 +41,7 @@ export function About() {
           <p className="text-balance text-sm text-muted-foreground md:text-base">
             FoodRescue Connect is a technology platform designed to bridge the gap between 
             surplus food and those who need it. We connect restaurants, grocery stores, and 
-            caterers with shelters, food banks, and volunteer drivers to ensure good food 
+            caterers with shelters and food banks to ensure good food 
             never goes to waste.
           </p>
         </div>

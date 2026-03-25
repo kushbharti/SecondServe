@@ -28,7 +28,7 @@ export function CTASection() {
             </h2>
             
             <p className="text-lg text-emerald-100/70 md:text-xl leading-relaxed max-w-2xl">
-              Start connecting your local community today. Whether you're a donor, recipient, or driver, your contribution creates immediate impact.
+              Start connecting your local community today. Whether you're a donor or recipient, your contribution creates immediate impact.
             </p>
 
             <div className="flex flex-col w-full sm:w-auto sm:flex-row items-center gap-5 pt-4">

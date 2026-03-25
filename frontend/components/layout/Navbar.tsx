@@ -32,8 +32,6 @@ function getDashboardPath(role: string) {
       return "/donor/dashboard";
     case "recipient":
       return "/recipient/dashboard";
-    case "driver":
-      return "/driver/dashboard";
     default:
       return "/";
   }
@@ -44,7 +42,13 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const displayName = user ? (user.contact_person || user.organization_name || user.hospital_name || user.full_name || "User") : "User";
+  const displayName = user
+    ? user.contact_person ||
+      user.organization_name ||
+      user.hospital_name ||
+      user.full_name ||
+      "User"
+    : "User";
   const displayInitials = displayName.charAt(0).toUpperCase();
   const shortName = displayName.split(" ")[0];
 
@@ -92,12 +96,6 @@ export function Navbar() {
       label: "Recipients",
       icon: Heart,
       role: "recipient",
-    },
-    {
-      href: "/driver/dashboard",
-      label: "Drivers",
-      icon: Truck,
-      role: "driver",
     },
   ];
 
@@ -224,7 +222,7 @@ export function Navbar() {
                       Dashboard
                     </Link>
                     <Link
-                      href={`/${user.role}/profile`}
+                      href={`/${user.role.toLowerCase()}/profile`}
                       className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl hover:bg-primary/10 hover:text-primary transition-colors group"
                       onClick={() => setIsProfileOpen(false)}
                     >

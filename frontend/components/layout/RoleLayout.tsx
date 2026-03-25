@@ -15,7 +15,7 @@ interface RoleLayoutProps {
   navItems: NavItem[];
   title: string;
   subtitle?: string;
-  userRole?: 'recipient' | 'donor' | 'driver';
+  userRole?: 'recipient' | 'donor';
 }
 
 export default function RoleLayout({

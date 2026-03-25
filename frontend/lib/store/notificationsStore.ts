@@ -7,13 +7,9 @@ import { v4 as uuid } from 'uuid';
 
 export type NotificationType =
   | 'listing_claimed'
-  | 'driver_assigned'
-  | 'food_picked_up'
-  | 'food_delivered'
   | 'listing_expired'
   | 'new_nearby_listing'
-  | 'claim_confirmed'
-  | 'delivery_available';
+  | 'claim_confirmed';
 
 export interface NotificationItem {
   id: string;

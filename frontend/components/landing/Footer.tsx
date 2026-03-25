@@ -24,9 +24,6 @@ export function LandingFooter() {
             <Link href="/recipient/dashboard" className="hover:text-foreground">
               Recipient dashboard
             </Link>
-            <Link href="/driver/dashboard" className="hover:text-foreground">
-              Driver dashboard
-            </Link>
           </div>
           <div className="flex flex-col gap-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">

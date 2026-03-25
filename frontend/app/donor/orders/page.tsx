@@ -89,7 +89,7 @@ export default function DonorOrdersPage() {
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border">
                             {req.image ? (
                                 <img 
-                                  src={req.image.startsWith('http') ? req.image : `http://localhost:8000${req.image}`} 
+                                  src={req.image.startsWith('http') ? req.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${req.image}`} 
                                   alt={req.title} 
                                   className="h-full w-full object-cover" 
                                 />

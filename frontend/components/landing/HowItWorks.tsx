@@ -18,15 +18,6 @@ const steps = [
     icon: MapPin,
     color: 'text-emerald-600',
     bg: 'bg-emerald-500/10'
-  },
-  {
-    id: 3,
-    title: 'Drivers deliver',
-    description: 'Volunteers pick up and deliver food to where it\'s needed.',
-    badge: 'For Drivers',
-    icon: Truck,
-    color: 'text-sky-600',
-    bg: 'bg-sky-500/10'
   }
 ];
 
@@ -51,7 +42,7 @@ export function HowItWorks() {
           </p>
         </div>
 
-        <div className="relative grid gap-8 md:grid-cols-3">
+        <div className="relative grid gap-8 md:grid-cols-2">
           {/* Gradient Track (Desktop) */}
           <div className="hidden md:block absolute top-[85px] left-[10%] right-[10%] h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent z-0" />
           

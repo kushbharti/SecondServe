@@ -26,7 +26,7 @@ interface SidebarProps {
   title: string;
   subtitle?: string;
   navItems: NavItem[];
-  userRole?: 'recipient' | 'donor' | 'driver';
+  userRole?: 'recipient' | 'donor';
 }
 
 export function Sidebar({ title, subtitle, navItems, userRole = 'recipient' }: SidebarProps) {
@@ -68,14 +68,7 @@ export function Sidebar({ title, subtitle, navItems, userRole = 'recipient' }: S
           hover: 'hover:bg-orange-50 hover:text-orange-800',
           border: 'border-orange-200/50'
         };
-      case 'driver':
-        return {
-          gradient: 'from-blue-500/10 via-blue-500/5 to-transparent',
-          activeBg: 'bg-blue-100/80 text-blue-900',
-          activeIcon: 'text-blue-600',
-          hover: 'hover:bg-blue-50 hover:text-blue-800',
-          border: 'border-blue-200/50'
-        };
+
       default: // recipient
         return {
           gradient: 'from-green-500/10 via-green-500/5 to-transparent',

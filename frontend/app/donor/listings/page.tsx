@@ -140,7 +140,7 @@ export default function ManageListingsPage() {
                         <div className="h-10 w-10 rounded-lg bg-orange-100/50 flex items-center justify-center shrink-0 overflow-hidden border">
                             {item.image ? (
                                 <img 
-                                  src={item.image.startsWith('http') ? item.image : `http://localhost:8000${item.image}`} 
+                                  src={item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.image}`} 
                                   alt={item.title || item.food_type} 
                                   className="h-full w-full object-cover" 
                                 />
