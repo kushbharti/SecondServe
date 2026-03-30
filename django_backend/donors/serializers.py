@@ -25,7 +25,7 @@ class FoodListingSerializer(serializers.ModelSerializer):
         rep = super().to_representation(instance)
         # Check for expiry dynamically
         from django.utils import timezone
-        if instance.expiry_date and instance.expiry_date < timezone.now() and rep['status'] == 'available':
+        if instance.expiry_date and instance.expiry_date < timezone.now() and rep['status'] == 'pending':
             rep['status'] = 'expired'
 
         # Build absolute image URL
@@ -66,6 +66,17 @@ class FoodListingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return super().create(validated_data)
 
+    def validate_quantity(self, value):
+        """Quantity must be a valid number ≥ 50."""
+        try:
+            qty = int(value) if isinstance(value, str) else value
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("Quantity must be a number.")
+        if qty < 10:
+            raise serializers.ValidationError("Quantity must be at least 10.")
+        return str(qty)
+
+
 
 class FoodPostSerializer(serializers.ModelSerializer):
     """
@@ -76,6 +87,12 @@ class FoodPostSerializer(serializers.ModelSerializer):
     donor_role = serializers.CharField(source='donor.role', read_only=True)
     donor_phone = serializers.CharField(source='donor.phone_number', read_only=True)
     donor_email = serializers.EmailField(source='donor.email', read_only=True)
+    # Acceptor details — visible to Donor after post is accepted
+    accepted_by_name = serializers.SerializerMethodField(read_only=True)
+    accepted_by_org = serializers.SerializerMethodField(read_only=True)
+    accepted_by_phone = serializers.CharField(source='accepted_by.phone_number', read_only=True, default=None)
+    accepted_by_email = serializers.EmailField(source='accepted_by.email', read_only=True, default=None)
+    accepted_by_role = serializers.CharField(source='accepted_by.role', read_only=True, default=None)
 
     class Meta:
         model = FoodPost
@@ -83,20 +100,55 @@ class FoodPostSerializer(serializers.ModelSerializer):
             'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',
             'food_name', 'quantity', 'food_type', 'servings',
             'expiry_time', 'pickup_address', 'city',
-            'status', 'description', 'created_at',
+            'status', 'accepted_by', 'accepted_by_name', 'accepted_by_org',
+            'accepted_by_phone', 'accepted_by_email', 'accepted_by_role',
+            'image', 'description', 'created_at',
         ]
-        read_only_fields = ('id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email', 'created_at', 'status')
+        read_only_fields = (
+            'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',
+            'accepted_by', 'accepted_by_name', 'accepted_by_org',
+            'accepted_by_phone', 'accepted_by_email', 'accepted_by_role',
+            'created_at', 'status'
+        )
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         from django.utils import timezone
-        if instance.expiry_time and instance.expiry_time < timezone.now() and rep['status'] == 'available':
+        if instance.expiry_time and instance.expiry_time < timezone.now() and rep['status'] == 'pending':
             rep['status'] = 'expired'
+            
+        # Build absolute image URL
+        if rep.get('image'):
+            request = self.context.get('request')
+            if request:
+                path = rep['image']
+                if not path.startswith('http'):
+                    rep['image'] = request.build_absolute_uri(path)
+            else:
+                from django.conf import settings as _settings
+                backend_url = getattr(_settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+                path = rep['image']
+                if not path.startswith('http'):
+                    rep['image'] = f"{backend_url}{path}" if path.startswith('/') else f"{backend_url}/media/{path}"
         return rep
 
     def get_donor_name(self, obj):
         user = obj.donor
         return user.username or user.full_name or user.email
+
+    def get_accepted_by_name(self, obj):
+        if not obj.accepted_by:
+            return None
+        user = obj.accepted_by
+        return user.contact_person or user.organization_name or user.hospital_name or user.username or user.email
+
+    def get_accepted_by_org(self, obj):
+        if not obj.accepted_by:
+            return None
+        user = obj.accepted_by
+        return user.organization_name or user.hospital_name or None
+
+
 
     def validate_food_type(self, value):
         allowed = [c[0] for c in FoodPost.FOOD_TYPE_CHOICES]
@@ -105,6 +157,12 @@ class FoodPostSerializer(serializers.ModelSerializer):
         return value
 
     def validate_quantity(self, value):
-        if not value or not value.strip():
-            raise serializers.ValidationError("Quantity cannot be empty.")
-        return value.strip()
+        if value is None:
+            raise serializers.ValidationError("Quantity is required.")
+        try:
+            qty = int(value)
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("Quantity must be a number.")
+        if qty < 9:
+            raise serializers.ValidationError("Quantity must be at least 10.")
+        return qty

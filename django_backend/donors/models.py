@@ -51,8 +51,8 @@ class FoodPost(models.Model):
         ('both', 'Both'),
     ]
     STATUS_CHOICES = [
-        ('available', 'Available'),
-        ('reserved', 'Reserved'),
+        ('pending', 'Pending'),
+        ('assigned', 'Assigned'),
         ('completed', 'Completed'),
         ('expired', 'Expired'),
     ]
@@ -62,13 +62,18 @@ class FoodPost(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='food_posts'
     )
     food_name = models.CharField(max_length=255)
-    quantity = models.CharField(max_length=100)
+    quantity = models.IntegerField(default=50)
     food_type = models.CharField(max_length=50, choices=FOOD_TYPE_CHOICES)
     servings = models.IntegerField(blank=True, null=True)
     expiry_time = models.DateTimeField(blank=True, null=True)
     pickup_address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available', db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        related_name='accepted_food_posts', null=True, blank=True
+    )
+    image = models.ImageField(upload_to='food_posts/', null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

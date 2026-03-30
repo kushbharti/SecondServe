@@ -55,6 +55,15 @@ def validate_pan(value):
     return value
 
 
+def validate_aadhar(value):
+    """Aadhar format: 12 digits"""
+    if value and not re.match(r'^\d{12}$', value):
+        raise serializers.ValidationError(
+            "Aadhar number must be exactly 12 digits."
+        )
+    return value
+
+
 # ---------------------------------------------------------------------------
 # Registration Serializer
 # ---------------------------------------------------------------------------
@@ -75,7 +84,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             # Registration
             'registration_number', 'cci_registration_number', 'hospital_registration_number',
             'registration_type', 'government_license_number', 'social_welfare_license_number',
-            'pan_number', 'darpan_id', 'registration_certificate_url',
+            'pan_number', 'aadhar_number', 'darpan_id', 'registration_certificate_url',
             # Hospital
             'government_department', 'hospital_type', 'number_of_beds', 'official_email',
             # Orphanage
@@ -99,6 +108,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def validate_pan_number(self, value):
         return validate_pan(value)
+
+    def validate_aadhar_number(self, value):
+        return validate_aadhar(value)
 
     def validate(self, attrs):
         # --- Password match ---
@@ -142,8 +154,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
                 'address_line1', 'city', 'district', 'state', 'pincode',
             ]
         else:
-            # All donor types only require email + password (username optional)
-            required = []
+            # Donor requires email, password (handled), plus Aadhar and PAN
+            required = ['aadhar_number', 'pan_number']
 
         errors = {}
         for field in required:
@@ -280,7 +292,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'organization_name', 'hospital_name', 'contact_person',
             'registration_number', 'cci_registration_number', 'hospital_registration_number',
             'registration_type', 'government_license_number', 'social_welfare_license_number',
-            'pan_number', 'darpan_id', 'registration_certificate_url',
+            'pan_number', 'aadhar_number', 'darpan_id', 'registration_certificate_url',
             'government_department', 'hospital_type', 'number_of_beds', 'official_email',
             'child_welfare_department',
             'capacity_people_served', 'capacity_children_supported', 'capacity_residents_supported',

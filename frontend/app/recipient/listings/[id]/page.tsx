@@ -1,33 +1,25 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useListings } from '@/hooks/useListings';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { recipientApi, FoodPost } from '@/lib/recipient';
 import { 
   ArrowLeft, 
   MapPin, 
   Package, 
   Calendar, 
-  DollarSign, 
   Clock,
   CheckCircle2,
   AlertCircle,
   Navigation,
   ExternalLink,
-  Share2,
-  Heart,
-  Store
+  Store,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
 import { isReceiverRole } from '@/types/user';
 
-// Calculate estimated value based on meals
-function calculatePrice(estimatedMeals: number): number {
-  return estimatedMeals * 5;
-}
-
-// Helper to get a relevant Unsplash image based on food type
 function getPlaceholderImage(foodType: string, id: string) {
   const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const types: Record<string, string[]> = {
@@ -41,52 +33,79 @@ function getPlaceholderImage(foodType: string, id: string) {
   const terms = types[foodType] || ['food', 'meal'];
   const term = terms[seed % terms.length];
   
-  // Use source.unsplash.com for random reliable images
-  // We add a random parameter to ensure different images for different IDs
   return `https://source.unsplash.com/800x600/?${term}&sig=${seed}`;
 }
 
 export default function FoodItemDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { listings, claimListing } = useListings();
   const { user } = useAuth();
-  const [isClaiming, setIsClaiming] = useState(false);
-
-  // Parse ID correctly from params
+  
   const listingId = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  const [listing, setListing] = useState<FoodPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const listing = useMemo(() => {
-    return listings.find(l => l.id === listingId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, listingId]);
+  useEffect(() => {
+    async function fetchListing() {
+      if (!listingId) return;
+      try {
+        const data = await recipientApi.getPostById(listingId);
+        setListing(data);
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setError('Food item not found or unavailable.');
+        } else {
+          setError('Failed to load food details.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchListing();
+  }, [listingId]);
 
-  if (!listing) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+         <p className="text-muted-foreground animate-pulse">Loading details...</p>
+      </div>
+    );
+  }
+
+  if (error || !listing) {
     return (
       <div className="container py-12 flex flex-col items-center justify-center min-h-[60vh]">
         <div className="rounded-3xl border border-dashed bg-card/50 p-12 text-center max-w-md animate-in fade-in zoom-in duration-500">
           <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
              <AlertCircle className="h-10 w-10 text-muted-foreground/50" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Food item not found</h2>
+          <h2 className="text-xl font-bold mb-2">Notice</h2>
           <p className="text-sm text-muted-foreground mb-8">
-            The food listing you are looking for might have been removed or claimed by someone else.
+            {error || 'The food listing you are looking for might have been removed or claimed by someone else.'}
           </p>
-          <Link
-            href="/recipient/browse"
+          <button
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
-            Browse Available Food
-          </Link>
+            Go Back
+          </button>
         </div>
       </div>
     );
   }
 
-  const estimatedValue = calculatePrice(listing.estimatedMeals);
-  const isClaimed = listing.claimedByRecipientId === user?.id;
-  const canClaim = listing.status === 'active' && user && isReceiverRole(user.role) && !isClaimed;
+  const isClaimedByMe = listing.accepted_by === user?.id || listing.accepted_by?.includes?.(user?.id as string) || (listing.status === 'assigned' || listing.status === 'completed');
+  
+  // NOTE: isClaimedByMe logic above covers the accepted_by field or status.
+  // Actually, we should check status AND if the accepted_by matches user ID if it's string.
+  // Usually if user fetched it in getPostById, they see it only if they accepted it or if it's available.
+  const isAvailable = listing.status === 'pending';
+  const canClaim = isAvailable && user && isReceiverRole(user.role);
 
   const handleClaim = async () => {
     if (!user) {
@@ -94,19 +113,20 @@ export default function FoodItemDetailPage() {
       return;
     }
     setIsClaiming(true);
-    // Simulate network delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 800));
-    claimListing(listing.id, user.id);
-    setIsClaiming(false);
+    try {
+      await recipientApi.acceptPost(listing.id);
+      setListing(prev => prev ? { ...prev, status: 'assigned' } : null);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to claim. The post might no longer be available.');
+    } finally {
+      setIsClaiming(false);
+    }
   };
 
-  // Generate Google Maps URL
-  const mapUrl = `https://www.google.com/maps?q=${listing.pickupLocation.latitude},${listing.pickupLocation.longitude}`;
-
-  // Use Unsplash image if no photos provided
-  const displayImage = listing.photos && listing.photos.length > 0 
-      ? listing.photos[0] 
-      : getPlaceholderImage(listing.foodType, listing.id);
+  // Google Maps URL requires address
+  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(listing.pickup_address || listing.city || '')}`;
+  const displayImage = getPlaceholderImage(listing.food_type, listing.id);
+  const isExpired = listing.status === 'expired' || (listing.expiry_time && new Date(listing.expiry_time) < new Date());
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20">
@@ -122,7 +142,7 @@ export default function FoodItemDetailPage() {
          <div className="relative h-[45vh] md:h-[55vh] w-full overflow-hidden rounded-b-[3rem] shadow-2xl">
              <img
                src={displayImage}
-               alt={listing.title}
+               alt={listing.food_name}
                className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
              />
              
@@ -135,35 +155,33 @@ export default function FoodItemDetailPage() {
                       <div className="flex-1 space-y-4">
                          <div className="flex flex-wrap items-center gap-3">
                             <span className="px-3 py-1 rounded-full bg-primary/90 backdrop-blur-sm text-xs font-bold uppercase tracking-wider text-white shadow-lg border border-white/10">
-                               {listing.foodType.replace('_', ' ')}
+                               {listing.food_type.replace('_', ' ')}
                             </span>
                             <span className={`px-3 py-1 rounded-full backdrop-blur-md text-xs font-bold uppercase tracking-wider shadow-lg border border-white/10 ${
-                               isClaimed ? 'bg-blue-500/90 text-white' : 'bg-white/10 text-white'
+                               ['assigned', 'completed'].includes(listing.status) ? 'bg-amber-500/90 text-white' : 
+                               isExpired ? 'bg-red-500/90 text-white' : 'bg-white/10 text-white'
                             }`}>
-                               {isClaimed ? 'Claimed by you' : listing.status.replace('_', ' ')}
+                               {listing.status === 'pending' && !isExpired ? 'Pending' : 
+                                listing.status === 'assigned' ? 'Assigned' : 
+                                listing.status === 'completed' ? 'Completed' : 'Expired'}
                             </span>
                          </div>
-                         <h1 className="text-4xl md:text-6xl font-bold tracking-tight shadow-sm text-balance">{listing.title}</h1>
+                         <h1 className="text-4xl md:text-6xl font-bold tracking-tight shadow-sm text-balance">{listing.food_name}</h1>
                          <div className="flex flex-wrap items-center gap-6 text-sm font-medium opacity-90">
-                            <span className="flex items-center gap-2">
-                               <MapPin className="h-5 w-5 text-primary" />
-                               {listing.pickupLocation.address}
-                            </span>
-                            <span className="hidden md:inline w-1 h-1 rounded-full bg-white/50" />
-                            <span className="flex items-center gap-2">
-                               <Clock className="h-5 w-5 text-orange-400" />
-                               Expires {new Date(listing.expiresAt).toLocaleDateString()}
-                            </span>
+                            {listing.city && (
+                              <span className="flex items-center gap-2">
+                                 <MapPin className="h-5 w-5 text-primary" />
+                                 {listing.city}
+                              </span>
+                            )}
+                            {(listing.city && listing.expiry_time) && <span className="hidden md:inline w-1 h-1 rounded-full bg-white/50" />}
+                            {listing.expiry_time && (
+                              <span className="flex items-center gap-2">
+                                 <Clock className="h-5 w-5 text-orange-400" />
+                                 Expires {new Date(listing.expiry_time).toLocaleDateString()}
+                              </span>
+                            )}
                          </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 shrink-0">
-                         <button className="p-3.5 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/20 active:scale-95">
-                            <Share2 className="h-5 w-5" />
-                         </button>
-                         <button className="p-3.5 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/20 active:scale-95 text-red-400 hover:text-red-300">
-                            <Heart className="h-5 w-5" />
-                         </button>
                       </div>
                    </div>
                 </div>
@@ -177,12 +195,10 @@ export default function FoodItemDetailPage() {
            {/* Left Column: Details */}
            <div className="lg:col-span-2 space-y-8">
               {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                  {[
-                    { icon: DollarSign, value: `$${estimatedValue}`, label: 'Est. Value', color: 'text-green-600', bg: 'bg-green-100' },
-                    { icon: Package, value: listing.quantity, label: 'Pounds (lb)', color: 'text-blue-600', bg: 'bg-blue-100' },
-                    { icon: CheckCircle2, value: listing.estimatedMeals, label: 'Meals', color: 'text-orange-600', bg: 'bg-orange-100' },
-                    { icon: Calendar, value: Math.ceil((new Date(listing.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) + ' Days', label: 'Remaining', color: 'text-purple-600', bg: 'bg-purple-100' },
+                    { icon: Package, value: listing.quantity, label: 'Items/Servings', color: 'text-blue-600', bg: 'bg-blue-100' },
+                    { icon: Calendar, value: listing.expiry_time ? new Date(listing.expiry_time).toLocaleDateString() : 'N/A', label: 'Expiry Date', color: 'text-purple-600', bg: 'bg-purple-100' },
                  ].map((stat, i) => (
                     <div key={i} className="bg-card/50 backdrop-blur-sm rounded-2xl p-4 border shadow-sm flex flex-col items-center text-center hover:translate-y-[-2px] transition-transform duration-300">
                        <div className={`p-3 rounded-xl mb-3 ${stat.bg} ${stat.color}`}>
@@ -202,25 +218,8 @@ export default function FoodItemDetailPage() {
                        About this listing
                     </h3>
                     <p className="text-muted-foreground leading-relaxed text-lg">
-                       {listing.description}
+                       {listing.description || 'No additional description provided by the donor.'}
                     </p>
-                 </div>
-                 
-                 <div className="pt-6 border-t">
-                    <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Dietary Information</h4>
-                    <div className="flex flex-wrap gap-2">
-                       {listing.dietaryTags.map(tag => (
-                          <span key={tag} className="px-4 py-2 rounded-xl bg-muted/50 text-sm font-medium text-foreground border hover:border-primary/50 transition-colors">
-                             {tag.replace('_', ' ')}
-                          </span>
-                       ))}
-                       {listing.allergens.map(tag => (
-                          <span key={tag} className="px-4 py-2 rounded-xl bg-red-50 text-sm font-medium text-red-700 border border-red-100 flex items-center gap-1.5">
-                             <AlertCircle className="h-3.5 w-3.5" />
-                             Contains: {tag.replace('_', ' ')}
-                          </span>
-                       ))}
-                    </div>
                  </div>
               </div>
               
@@ -228,29 +227,18 @@ export default function FoodItemDetailPage() {
               <div className="bg-card rounded-3xl p-8 border shadow-sm">
                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <Navigation className="h-5 w-5 text-primary" />
-                    Pickup Instructions
+                    Pickup Rules & Info
                  </h3>
                  <div className="flex flex-col md:flex-row gap-6 items-start p-6 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex flex-row md:flex-col gap-4 w-full md:w-auto">
-                       <div className="p-3 bg-background rounded-xl border shadow-sm text-center min-w-[80px]">
-                          <span className="block text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Start</span>
-                          <span className="block text-lg font-bold mt-1">
-                             {new Date(listing.pickupStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                       </div>
-                       <div className="p-3 bg-background rounded-xl border shadow-sm text-center min-w-[80px]">
-                          <span className="block text-[10px] uppercase text-muted-foreground font-bold tracking-wider">End</span>
-                          <span className="block text-lg font-bold mt-1">
-                             {new Date(listing.pickupEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                       </div>
-                    </div>
                     <div className="flex-1 space-y-2">
-                          <h4 className="font-semibold">Important Notes</h4>
-                          <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
-                             <li>Please arrive strictly within the specified time window.</li>
+                          <h4 className="font-semibold px-2 py-1 bg-amber-100 text-amber-800 rounded-md inline-block mb-2 text-sm">Important Notes</h4>
+                          <ul className="list-disc list-inside text-muted-foreground space-y-2 text-sm ml-1">
                              <li>Bring your own bags or containers to transport the food.</li>
-                             <li>Contact the donor through the app if you're running late.</li> 
+                             <li>Contact the donor promptly once you claim the donation to coordinate pickup time.</li> 
+                             <li>Confirm receipt via the platform once you collect the food to conclude the cycle.</li>
+                             {listing.pickup_address && (
+                               <li><strong>Address:</strong> {listing.pickup_address}</li>
+                             )}
                           </ul>
                     </div>
                  </div>
@@ -266,21 +254,21 @@ export default function FoodItemDetailPage() {
                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Status</p>
                        <p className="font-semibold flex items-center gap-2">
                           <span className={`relative flex h-2.5 w-2.5`}>
-                             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${listing.status === 'active' ? 'bg-green-400' : 'bg-gray-400'}`}></span>
-                             <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${listing.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isAvailable ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+                             <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isAvailable ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                           </span>
-                          {listing.status === 'active' ? 'Available' : 'Unavailable'}
+                          {isAvailable ? 'Pending' : 'Unavailable'}
                        </p>
                     </div>
                     <div className="text-right">
                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Donor</p>
-                       <Link href="#" className="font-semibold text-primary hover:underline flex items-center justify-end gap-1">
-                          Fresh Bakery <ExternalLink className="h-3 w-3" />
-                       </Link>
+                       <span className="font-semibold text-primary flex items-center justify-end gap-1">
+                          {listing.donor_name || 'Anonymous User'}
+                       </span>
                     </div>
                  </div>
                  
-                 {canClaim ? (
+                 {canClaim && !isExpired ? (
                     <button
                        onClick={handleClaim}
                        disabled={isClaiming}
@@ -289,7 +277,10 @@ export default function FoodItemDetailPage() {
                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                        <div className="relative flex items-center gap-2">
                           {isClaiming ? (
-                             <>Claiming...</>
+                             <>
+                               <Loader2 className="h-5 w-5 animate-spin" />
+                               Claiming...
+                             </>
                           ) : (
                              <>
                                 <CheckCircle2 className="h-5 w-5" />
@@ -298,13 +289,13 @@ export default function FoodItemDetailPage() {
                           )}
                        </div>
                     </button>
-                 ) : isClaimed ? (
-                    <div className="w-full py-4 rounded-xl bg-blue-50 text-blue-700 font-bold text-center border-2 border-blue-100 flex items-center justify-center gap-2">
-                       <CheckCircle2 className="h-5 w-5" /> Claimed Successfully
+                 ) : listing.status === 'assigned' || listing.status === 'completed' ? (
+                    <div className="w-full py-4 rounded-xl bg-amber-50 text-amber-700 font-bold text-center border-2 border-amber-100 flex items-center justify-center gap-2">
+                       <CheckCircle2 className="h-5 w-5" /> Already Claimed
                     </div>
                  ) : (
                     <button disabled className="w-full py-4 rounded-xl bg-muted text-muted-foreground font-bold cursor-not-allowed border-2 border-transparent">
-                       Currently Unavailable
+                       {isExpired ? 'Expired' : 'Currently Unavailable'}
                     </button>
                  )}
                  
@@ -336,7 +327,7 @@ export default function FoodItemDetailPage() {
                                  <div className="absolute top-7 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-sm rounded-full" />
                               </div>
                               <div className="mt-2 px-2 py-1 bg-white/90 backdrop-blur rounded-md shadow-sm text-[10px] font-bold border opacity-0 group-hover:opacity-100 transition-opacity">
-                                 {listing.pickupLocation.address}
+                                 {listing.pickup_address || listing.city || 'Location unavailable'}
                               </div>
                          </div>
                     </div>
@@ -349,4 +340,5 @@ export default function FoodItemDetailPage() {
     </div>
   );
 }
+
 

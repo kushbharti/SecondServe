@@ -9,22 +9,30 @@ import {
   XCircle,
   Loader2
 } from 'lucide-react';
-import { donorApi, FoodListing } from '@/lib/donor';
+import { donorPostsApi } from '@/lib/donor';
+import { FoodRequest } from '@/lib/recipient';
 import { useAuthStore } from '@/store/useAuthStore';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { toast } from 'react-hot-toast';
 
 export default function DonorOrdersPage() {
   const { user } = useAuthStore();
-  const [listings, setListings] = useState<FoodListing[]>([]);
+  const [requests, setRequests] = useState<FoodRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [isAccepting, setIsAccepting] = useState(false);
 
-  const fetchListings = async () => {
+  const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const data = await donorApi.getListings(statusFilter);
-      setListings(data);
+      const data = await donorPostsApi.getAvailableFoodRequests(statusFilter);
+      setRequests(data);
     } catch (error) {
-      console.error('Failed to fetch listings:', error);
+      console.error('Failed to fetch requests:', error);
     } finally {
       setIsLoading(false);
     }
@@ -32,17 +40,32 @@ export default function DonorOrdersPage() {
 
   useEffect(() => {
     if (user) {
-        fetchListings();
+        fetchRequests();
     }
   }, [user, statusFilter]);
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
+    // Legacy placeholder
+  };
+
+  const attemptAccept = (id: string) => {
+    setSelectedRequestId(id);
+    setIsModalOpen(true);
+  };
+
+  const confirmAccept = async () => {
+    if (!selectedRequestId) return;
+    setIsAccepting(true);
     try {
-      await donorApi.updateStatus(id, newStatus);
-      setListings(prev => prev.map(l => l.id === id ? { ...l, status: newStatus as any } : l));
-    } catch (error) {
-       console.error('Failed to update status:', error);
-       alert('Failed to update status');
+      await donorPostsApi.acceptFoodRequest(selectedRequestId);
+      await fetchRequests();
+      setIsModalOpen(false);
+      toast.success('Food request accepted successfully!');
+    } catch (e) {
+      toast.error('Failed to accept request');
+    } finally {
+      setIsAccepting(false);
+      setSelectedRequestId(null);
     }
   };
 
@@ -70,86 +93,97 @@ export default function DonorOrdersPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="flex-1 md:flex-none max-w-xs rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <option value="all">View All Entries</option>
-          <option value="available">Pending / Available</option>
-          <option value="completed">Completed / Accepted</option>
+          <option value="all">View All Entered</option>
+          <option value="pending">Pending</option>
+          <option value="assigned">Assigned</option>
+          <option value="completed">Completed</option>
           <option value="expired">Expired</option>
         </select>
       </div>
 
       <div className="space-y-6">
           <div className="space-y-4">
-            {listings.length === 0 ? (
-                <div className="text-sm text-muted-foreground p-4 border rounded-xl">No orders or requests found.</div>
+            {requests.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-4 border rounded-xl">No requests found.</div>
             ) : (
-                listings.map((req) => (
-                <div key={req.id} className="bg-card rounded-xl border p-5 shadow-sm transition-all hover:shadow-md">
+                requests.map((req) => (
+                <div key={req.id} className="bg-card rounded-2xl border shadow-xs overflow-hidden transition-all hover:shadow-md">
+                    {/* Status top stripe */}
+                    <div className={`h-1 w-full ${
+                      req.status === 'pending' ? 'bg-green-400' :
+                      req.status === 'assigned' ? 'bg-amber-400' :
+                      req.status === 'completed' ? 'bg-blue-400' : 'bg-red-400'
+                    }`} />
+                    
+                    <div className="p-4">
                     <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border">
-                            {req.image ? (
-                                <img 
-                                  src={req.image.startsWith('http') ? req.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${req.image}`} 
-                                  alt={req.title} 
-                                  className="h-full w-full object-cover" 
-                                />
-                            ) : (
-                                <User className="h-5 w-5 text-muted-foreground" />
-                            )}
+                            <User className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                        <h3 className="font-semibold">{req.title}</h3>
-                        <p className="text-xs text-muted-foreground">ID: #{req.id}</p>
+                        <h3 className="font-semibold">{req.food_type_needed || 'Food Item Needed'}</h3>
+                        <p className="text-xs text-muted-foreground">NGO: {req.receiver_name || 'Organization'}</p>
                         </div>
                     </div>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${
-                            req.status === 'available' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                            req.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
                             req.status === 'expired' ? 'bg-red-50 text-red-800 border-red-200' :
                             'bg-green-50 text-green-800 border-green-200'
                         }`}>
                         {req.status === 'completed' && <CheckCircle className="h-3 w-3 inline mr-1" />}
-                        {req.status === 'available' ? 'Pending' :
-                         req.status === 'expired' ? 'Expired' :
-                         req.status === 'completed' ? 'Completed' : req.status}
+                        {req.status}
                     </span>
                     </div>
                     
                     <div className="grid gap-3 mb-4 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Package className="h-4 w-4 shrink-0" />
-                        <span className="text-foreground font-medium">{req.quantity}</span>
+                        <span className="text-foreground font-medium">{req.quantity_needed}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4 shrink-0" />
-                        <span>Pickup: {new Date(req.expiry_date).toLocaleDateString()}</span>
+                        <span>Required By: {req.required_by ? new Date(req.required_by).toLocaleDateString() : 'No specific date'}</span>
                     </div>
 
-                    {req.status === 'completed' && req.matched_user_name && (
+                    {(req.status === 'assigned' || req.status === 'completed') && (
                         <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs space-y-1 border">
-                            <p className="font-medium text-foreground">Accepted By:</p>
-                            <div>{req.matched_user_name}</div>
-                            {req.matched_user_phone && <div>📞 {req.matched_user_phone}</div>}
-                            {req.matched_user_email && <div className="truncate">✉️ {req.matched_user_email}</div>}
+                            <p className="font-medium text-foreground">Requested By:</p>
+                            <div>{req.receiver_name}</div>
+                            {req.receiver_phone && <div>📞 {req.receiver_phone}</div>}
+                            {req.receiver_email && <div className="truncate">✉️ {req.receiver_email}</div>}
                         </div>
                     )}
                     </div>
 
-                    {req.status === 'available' && (
+                    {req.status === 'pending' && (
                         <div className="flex gap-2 pt-4 border-t">
                             <button 
-                                onClick={() => handleStatusUpdate(req.id, 'expired')}
-                                className="flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-red-50 text-red-600 border-red-200 transition-colors" 
-                                title="Mark as Expired"
+                                onClick={() => attemptAccept(String(req.id))}
+                                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm transition-all flex-1 text-sm" 
+                                title="Accept Request"
                             >
-                                <XCircle className="h-4 w-4" />
+                                <CheckCircle className="h-4 w-4" /> Accept Request
                             </button>
                         </div>
                     )}
+                    </div>
                 </div>
                 ))
             )}
           </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={confirmAccept}
+        title="Accept Food Request"
+        description={<p>Are you sure you want to accept this request? You will be responsible for fulfilling this order.</p>}
+        confirmLabel="Accept Request"
+        variant="primary"
+        isLoading={isAccepting}
+      />
     </div>
   );
 }

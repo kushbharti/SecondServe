@@ -4,18 +4,18 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { recipientApi } from '@/lib/recipient';
 import { Package, UtensilsCrossed, DollarSign, TrendingUp } from 'lucide-react';
-import { FoodListing } from '@/lib/donor';
+import { FoodPost } from '@/lib/donor';
 
 export function StatsCards() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<FoodListing[]>([]);
+  const [requests, setRequests] = useState<FoodPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchRequests() {
       if (user) {
         try {
-          const data = await recipientApi.getRequests();
+          const data = await recipientApi.getMyAcceptedPosts();
           setRequests(data);
         } catch (error) {
           console.error("Failed to fetch requests", error);

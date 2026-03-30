@@ -36,6 +36,7 @@ export interface User {
   government_license_number?: string;
   social_welfare_license_number?: string;
   pan_number?: string;
+  aadhar_number?: string;
   darpan_id?: string;
   registration_certificate_url?: string;
   // Departments

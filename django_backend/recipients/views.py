@@ -45,20 +45,49 @@ class FoodRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         # FIX: select_related to avoid N+1 on receiver FK and food_post FK
         base_qs = FoodRequest.objects.select_related(
-            'receiver', 'food_post', 'food_post__donor'
+            'receiver', 'food_post', 'food_post__donor', 'accepted_by'
         ).order_by('-created_at')
 
-        if user.is_staff:
-            return base_qs
-        # Receivers see their own requests
-        if user.role in ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL'):
-            return base_qs.filter(receiver=user)
-        # Donors see all open requests
-        return base_qs.filter(status='open')
+        if self.action == 'list':
+            from django.utils import timezone
+            
+            # Receivers see their own requests
+            if user.is_authenticated and getattr(user, 'is_receiver', False):
+                qs = base_qs.filter(receiver=user)
+                status_filter = self.request.query_params.get('status')
+                if status_filter and status_filter != 'all':
+                    if status_filter == 'expired':
+                        qs = qs.filter(required_by__lt=timezone.now()).exclude(status__in=['completed', 'expired'])
+                    elif status_filter == 'pending':
+                        qs = qs.filter(required_by__gte=timezone.now(), status='pending')
+                    else:
+                        qs = qs.filter(status=status_filter)
+                return qs
+                
+            # Donors see all pending requests AND requests they accepted
+            if user.is_authenticated and getattr(user, 'is_donor', False):
+                status_filter = self.request.query_params.get('status')
+                if status_filter and status_filter != 'all':
+                    if status_filter == 'assigned':
+                        return base_qs.filter(accepted_by=user, status='assigned')
+                    elif status_filter == 'completed':
+                        return base_qs.filter(accepted_by=user, status='completed')
+                    else:
+                        return base_qs.filter(status=status_filter)
+                from django.db.models import Q
+                return base_qs.filter(
+                    Q(status='pending', required_by__gt=timezone.now()) |
+                    Q(accepted_by=user)
+                )
+
+            # Public/anonymous: only pending, non-expired requests
+            return base_qs.filter(status='pending', required_by__gt=timezone.now())
+
+        return base_qs
 
     def perform_create(self, serializer):
         serializer.save(receiver=self.request.user)
-        cache_service.invalidate('food_requests:open')
+        cache_service.invalidate('food_requests:pending')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -95,8 +124,66 @@ class FoodRequestViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return error_response(message="Update failed.", errors=serializer.errors)
         serializer.save()
-        cache_service.invalidate('food_requests:open')
+        cache_service.invalidate('food_requests:pending')
         return success_response(data=serializer.data, message="Food request updated.")
+
+    from rest_framework.decorators import action
+    from accounts.permissions import IsDonor
+
+    @action(detail=True, methods=['post'], url_path='accept',
+            permission_classes=[permissions.IsAuthenticated, IsDonor])
+    @transaction.atomic
+    def accept(self, request, pk=None):
+        """Donor accepts a food request — status: pending → assigned."""
+        try:
+            req = FoodRequest.objects.select_for_update().get(pk=pk)
+        except FoodRequest.DoesNotExist:
+            return error_response('Food request not found.', status_code=status.HTTP_404_NOT_FOUND)
+
+        if req.status != 'pending':
+            return error_response(
+                f'This request is not pending (current status: {req.status}).',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        req.status = 'assigned'
+        req.accepted_by = request.user
+        req.save(update_fields=['status', 'accepted_by'])
+        cache_service.invalidate('food_requests:pending')
+        return success_response(
+            data=FoodRequestSerializer(req).data,
+            message='Food request accepted successfully.'
+        )
+
+    @action(detail=True, methods=['post'], url_path='mark-completed',
+            permission_classes=[permissions.IsAuthenticated, IsReceiver])
+    def mark_completed(self, request, pk=None):
+        """Receiver marks a food request as completed — status: assigned → completed.
+        Only the receiver who created it can perform this action.
+        """
+        try:
+            req = FoodRequest.objects.get(pk=pk)
+        except FoodRequest.DoesNotExist:
+            return error_response('Food request not found.', status_code=status.HTTP_404_NOT_FOUND)
+
+        if req.status != 'assigned':
+            return error_response(
+                'Only assigned requests can be marked as completed.',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        if req.receiver != request.user:
+            return error_response(
+                'Only the receiver who created this request can mark it as completed.',
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
+        req.status = 'completed'
+        req.save(update_fields=['status'])
+        return success_response(
+            data=FoodRequestSerializer(req).data,
+            message='Food request marked as completed.'
+        )
 
 
 class AdminFoodRequestsView(generics.ListAPIView):
@@ -136,7 +223,7 @@ class RecipientListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, listing_type='request')
-        cache_service.invalidate('food_requests:open')
+        cache_service.invalidate('food_requests:pending')
 
 
 class AvailableListingsView(generics.ListAPIView):
@@ -227,7 +314,7 @@ class CancelRequestView(APIView):
         listing.status = 'available'
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
         cache_service.invalidate('available_listings')
-        cache_service.invalidate('food_requests:open')
+        cache_service.invalidate('food_requests:pending')
         return success_response(data=FoodListingSerializer(listing).data, message="Request cancelled successfully")
 
 
@@ -271,7 +358,7 @@ class CompleteListingView(APIView):
         listing.status = 'completed'
         listing.save(update_fields=['status', 'updated_at'])
         cache_service.invalidate('available_listings')
-        cache_service.invalidate('food_requests:open')
+        cache_service.invalidate('food_requests:pending')
         return success_response(
             data=FoodListingSerializer(listing).data,
             message='Listing marked as completed successfully'

@@ -79,6 +79,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     social_welfare_license_number = models.CharField(max_length=100, blank=True, null=True)
     # FIXED: max_length 50 → 20, regex: AAAAA9999A
     pan_number = models.CharField(max_length=20, blank=True, null=True)
+    aadhar_number = models.CharField(max_length=12, blank=True, null=True)
     darpan_id = models.CharField(max_length=100, blank=True, null=True)
     # FIXED: URLField → TextField (allows longer certificate paths/URLs)
     registration_certificate_url = models.TextField(blank=True, null=True)

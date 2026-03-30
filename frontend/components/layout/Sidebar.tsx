@@ -85,7 +85,7 @@ export function Sidebar({ title, subtitle, navItems, userRole = 'recipient' }: S
   return (
     <>
       {/* Mobile Header */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b sticky top-0 z-40">
+      <div className="lg:hidden flex items-center justify-between p-4 glass-card border-b sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className={cn("p-2 rounded-lg", theme.activeBg)}>
             <LayoutDashboard className={cn("w-5 h-5", theme.activeIcon)} />
@@ -114,7 +114,7 @@ export function Sidebar({ title, subtitle, navItems, userRole = 'recipient' }: S
       {/* Sidebar Container */}
       <aside 
         className={cn(
-          "fixed lg:sticky top-0 left-0 z-50 h-[100dvh] bg-background border-r transition-all duration-300 ease-in-out",
+          "fixed lg:sticky top-0 left-0 z-50 h-[100dvh] glass-card border-r transition-all duration-300 ease-in-out",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           isCollapsed ? "w-20" : "w-72",
           theme.border
@@ -216,18 +216,6 @@ export function Sidebar({ title, subtitle, navItems, userRole = 'recipient' }: S
             isCollapsed && "items-center"
           )}>
             <div className="space-y-1">
-              <Link
-                href={`/${userRole}/settings`}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-background hover:shadow-xs",
-                  isCollapsed && "justify-center"
-                )}
-                title="Settings"
-              >
-                <Settings className="w-4 h-4 text-muted-foreground" />
-                {!isCollapsed && <span className="text-muted-foreground">Settings</span>}
-              </Link>
-              
               <button
                 onClick={() => {
                    logout();

@@ -178,7 +178,7 @@ export default function LoginPage() {
                 required
                 value={registrationNumber}
                 onChange={(e) => setRegistrationNumber(e.target.value)}
-                className="block w-full rounded-xl border border-input bg-muted/30 pl-10 pr-4 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+                className="clay-input block w-full pl-10 pr-4 py-3 text-sm"
                 placeholder={regField.label}
               />
             </div>
@@ -205,7 +205,7 @@ export default function LoginPage() {
                   ? setOfficialEmail(e.target.value)
                   : setEmail(e.target.value)
               }
-              className="block w-full rounded-xl border border-input bg-muted/30 pl-10 pr-4 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+              className="clay-input block w-full pl-10 pr-4 py-3 text-sm"
               placeholder="name@example.com"
             />
           </div>
@@ -233,7 +233,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full rounded-xl border border-input bg-muted/30 pl-10 pr-10 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+              className="clay-input block w-full pl-10 pr-10 py-3 text-sm"
               placeholder="••••••••"
             />
             <button
@@ -257,7 +257,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="group relative w-full flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-primary/40 hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="clay-btn group relative w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-bold disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isLoading ? "Logging in..." : `Log in as ${role.replace(/_/g, ' ')}`}
           {!isLoading && (
@@ -265,23 +265,6 @@ export default function LoginPage() {
           )}
         </button>
       </form>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Don&apos;t have an account?
-          </span>
-        </div>
-      </div>
-
-      <div className="text-center">
-        <Link href="/register" className="text-sm font-medium text-primary hover:underline">
-          Create an account
-        </Link>
-      </div>
     </div>
   );
 }

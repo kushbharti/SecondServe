@@ -18,6 +18,8 @@ export default function DonorProfilePage() {
     full_name: '',
     phone_number: '',
     address: '',
+    aadhar_number: '',
+    pan_number: '',
   });
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export default function DonorProfilePage() {
         full_name: user.full_name || '',
         phone_number: user.phone_number || '',
         address: user.address || '',
+        aadhar_number: user.aadhar_number || '',
+        pan_number: user.pan_number || '',
       });
     }
   }, [user]);
@@ -64,6 +68,8 @@ export default function DonorProfilePage() {
         full_name: formData.full_name,
         phone_number: formData.phone_number,
         address: formData.address,
+        aadhar_number: formData.aadhar_number,
+        pan_number: formData.pan_number,
       });
       await checkAuth();
       setSuccess('Profile updated successfully!');
@@ -242,16 +248,43 @@ export default function DonorProfilePage() {
             {/* Address */}
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                <MapPin className="h-4 w-4 text-muted-foreground" />
                 Address
               </label>
-              <textarea
+              <input
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                rows={3}
-                placeholder="Your pickup or business address"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                placeholder="Full address"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Aadhar Number */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Aadhar Card Number</label>
+              <input
+                name="aadhar_number"
+                value={formData.aadhar_number}
+                onChange={handleChange}
+                maxLength={12}
+                placeholder="12 digit Aadhar"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                required
+              />
+            </div>
+
+            {/* PAN Number */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">PAN Card Number</label>
+              <input
+                name="pan_number"
+                value={formData.pan_number}
+                onChange={handleChange}
+                maxLength={10}
+                placeholder="ABCDE1234F"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-uppercase uppercase"
+                required
               />
             </div>
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { isReceiverRole } from "@/types/user";
 import {
   User,
   LogOut,
@@ -19,7 +20,7 @@ import {
   LayoutDashboard,
   Heart,
 } from "lucide-react";
-import { cn } from "@/lib/utils"; // Assuming this utility exists, if not I'll inline it or use clsx directly
+import { cn } from "@/lib/utils";
 
 // In case cn doesn't exist, I'll define a simple helper or just use template literals
 // Checking previous files, I haven't seen lib/utils.ts content but commonly used in shadcn.
@@ -27,14 +28,14 @@ import { cn } from "@/lib/utils"; // Assuming this utility exists, if not I'll i
 // To be safe, I will implement a local helper or using standard string interpolation for now.
 
 function getDashboardPath(role: string) {
-  switch (role) {
-    case "donor":
-      return "/donor/dashboard";
-    case "recipient":
-      return "/recipient/dashboard";
-    default:
-      return "/";
-  }
+  if (isReceiverRole(role)) return "/recipient/dashboard";
+  if (role === 'DONOR' || role === 'donor') return "/donor/dashboard";
+  return "/";
+}
+
+function getProfilePath(role: string) {
+  if (isReceiverRole(role)) return "/recipient/profile";
+  return "/donor/profile";
 }
 
 export function Navbar() {
@@ -193,9 +194,8 @@ export function Navbar() {
                   />
                 </button>
 
-                {/* Dropdown Menu */}
                 <div
-                  className={`absolute right-0 mt-4 w-72 rounded-3xl border border-border/50 bg-background/80 backdrop-blur-2xl shadow-2xl p-3 transition-all duration-300 origin-top-right z-[60] ${
+                  className={`absolute right-0 mt-4 w-72 rounded-[2rem] glass-card p-3 transition-all duration-300 origin-top-right z-[60] ${
                     isProfileOpen
                       ? "opacity-100 scale-100 translate-y-0"
                       : "opacity-0 scale-95 -translate-y-4 pointer-events-none"
@@ -222,7 +222,7 @@ export function Navbar() {
                       Dashboard
                     </Link>
                     <Link
-                      href={`/${user.role.toLowerCase()}/profile`}
+                      href={getProfilePath(user.role)}
                       className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl hover:bg-primary/10 hover:text-primary transition-colors group"
                       onClick={() => setIsProfileOpen(false)}
                     >
@@ -230,16 +230,6 @@ export function Navbar() {
                         <User className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl hover:bg-primary/10 hover:text-primary transition-colors group"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <div className="p-2 rounded-xl bg-background border shadow-sm group-hover:border-primary/20 transition-colors">
-                        <Settings className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                      Settings
                     </Link>
                   </div>
 
@@ -266,7 +256,7 @@ export function Navbar() {
                 </Link>
                 <Link
                   href="/register"
-                  className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 border border-white/10"
+                  className="px-6 py-2.5 clay-btn text-sm font-bold"
                 >
                   Get Started
                 </Link>

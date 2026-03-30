@@ -10,8 +10,6 @@ export default function AddRequestPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -30,43 +28,21 @@ export default function AddRequestPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const fullDescription = `${formData.description}\n\nDelivery/Drop-off Instructions: ${formData.pickup_instructions}\nPreferred Time: ${formData.pickup_start} - ${formData.pickup_end}`;
+      const fullDescription = `Title: ${formData.title}\n\n${formData.description}\n\nDelivery/Drop-off Instructions: ${formData.pickup_instructions}\nPreferred Time: ${formData.pickup_start} - ${formData.pickup_end}`;
 
-      const data = new FormData();
-      data.append('title', formData.title);
-      data.append('food_type', formData.food_type);
-      data.append('quantity', formData.quantity);
-      data.append('expiry_date', new Date(formData.expiry_date).toISOString());
-      data.append('pickup_address', formData.pickup_address);
-      data.append('description', fullDescription);
-      
-      if (imageFile) {
-        data.append('image', imageFile);
-      }
+      const payload = {
+        food_type_needed: formData.food_type,
+        quantity_needed: formData.quantity,
+        required_by: new Date(formData.expiry_date).toISOString(),
+        message: fullDescription,
+      };
 
-      await recipientApi.createRequest(data);
+      await recipientApi.createRequest(payload);
 
       router.push('/recipient/requests');
       router.refresh();

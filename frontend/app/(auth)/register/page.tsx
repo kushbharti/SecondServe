@@ -47,7 +47,7 @@ const renderField = (
       required={required}
       value={formData[name] ?? ''}
       onChange={handleChange}
-      className="block w-full rounded-xl border border-input bg-muted/30 px-4 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+      className="clay-input block w-full px-4 py-3 text-sm"
     />
   </div>
 );
@@ -75,7 +75,7 @@ const renderPasswordField = (
         required={required}
         value={formData[name] ?? ''}
         onChange={handleChange}
-        className="block w-full rounded-xl border border-input bg-muted/30 pl-4 pr-10 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+        className="clay-input block w-full pl-4 pr-10 py-3 text-sm"
       />
       <button
         type="button"
@@ -106,7 +106,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: '', password: '', confirmPassword: '', phone_number: '',
     // Donor-specific
-    username: '',
+    username: '', aadhar_number: '',
     // Org fields
     organization_name: '', hospital_name: '', contact_person: '',
     // Registration
@@ -164,6 +164,8 @@ export default function RegisterPage() {
       if (isDonor) {
         payload.username = formData.username;
         payload.full_name = formData.username; // sync for display compatibility
+        payload.aadhar_number = formData.aadhar_number;
+        payload.pan_number = formData.pan_number;
       }
 
       if (role === 'NGO') {
@@ -364,7 +366,7 @@ export default function RegisterPage() {
 
       <button
         type="submit"
-        className="group w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98]"
+        className="clay-btn group w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-bold shadow-lg"
       >
         Continue as {role.replace(/_/g, ' ')}
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -380,7 +382,13 @@ export default function RegisterPage() {
       <div className="grid gap-4 md:grid-cols-2">
 
         {/* Donor fields */}
-        {isDonor && renderField('username', 'Username', 'text', true, formData, handleChange)}
+        {isDonor && (
+          <>
+            {renderField('username', 'Username', 'text', true, formData, handleChange)}
+            {renderField('aadhar_number', 'Aadhar Card Number (12 digits)', 'text', true, formData, handleChange)}
+            {renderField('pan_number', 'PAN Card Number', 'text', true, formData, handleChange)}
+          </>
+        )}
         {role === 'NGO' && renderField('organization_name', 'Organization Name', 'text', true, formData, handleChange)}
         {role === 'ORPHANAGE' && renderField('organization_name', 'Organization Name', 'text', true, formData, handleChange)}
         {role === 'OLD_AGE_HOME' && renderField('organization_name', 'Organization Name', 'text', true, formData, handleChange)}
@@ -456,7 +464,7 @@ export default function RegisterPage() {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            className="block w-full min-h-[80px] rounded-xl border border-input bg-muted/30 px-4 py-3 text-sm shadow-sm transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 outline-none"
+            className="clay-input block w-full min-h-[80px] px-4 py-3 text-sm"
           />
         </div>
       )}
@@ -488,7 +496,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="clay-btn flex-[2] flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isLoading ? "Creating account..." : "Complete Registration"}
         </button>
@@ -511,23 +519,7 @@ export default function RegisterPage() {
 
       {step === 1 ? step1Content : step2Content}
 
-      {step === 1 && (
-        <>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border/60" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Already have an account?</span>
-            </div>
-          </div>
-          <div className="text-center">
-            <Link href="/login" className="text-sm font-medium text-primary hover:underline">
-              Log in here
-            </Link>
-          </div>
-        </>
-      )}
+
     </div>
   );
 }
