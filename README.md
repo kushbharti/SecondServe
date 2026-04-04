@@ -12,31 +12,31 @@ Second Serve is a full-stack web platform that bridges the gap between food dono
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| **Role-based Auth** | DONOR role + 4 receiver types (NGO, Orphanage, Old Age Home, Govt Hospital) |
-| **JWT Authentication** | Access + refresh tokens, auto-refresh on 401, blacklist on logout |
-| **Receiver Approval Flow** | Receivers are pending until an admin approves them |
-| **Food Listings** | Donors post surplus food; receivers browse and claim |
-| **Food Requests** | Receivers post food needs; donors accept and fulfill |
-| **Redis Caching** | Profile, food posts, listings cached with auto-invalidation |
-| **Show/Hide Password** | Eye icon toggle on login and register pages |
-| **Personalized Dashboard** | User name displayed dynamically from backend |
-| **Admin Panel** | Approve/reject receivers, view all users, posts, requests |
+| Feature                    | Description                                                                 |
+| -------------------------- | --------------------------------------------------------------------------- |
+| **Role-based Auth**        | DONOR role + 4 receiver types (NGO, Orphanage, Old Age Home, Govt Hospital) |
+| **JWT Authentication**     | Access + refresh tokens, auto-refresh on 401, blacklist on logout           |
+| **Receiver Approval Flow** | Receivers are pending until an admin approves them                          |
+| **Food Listings**          | Donors post surplus food; receivers browse and claim                        |
+| **Food Requests**          | Receivers post food needs; donors accept and fulfill                        |
+| **Redis Caching**          | Profile, food posts, listings cached with auto-invalidation                 |
+| **Show/Hide Password**     | Eye icon toggle on login and register pages                                 |
+| **Personalized Dashboard** | User name displayed dynamically from backend                                |
+| **Admin Panel**            | Approve/reject receivers, view all users, posts, requests                   |
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Backend** | Django 6, Django REST Framework, SimpleJWT |
-| **Database** | MySQL |
-| **Cache** | Redis (via `django-redis`), falls back to LocMemCache |
-| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS |
-| **State Management** | Zustand |
-| **HTTP Client** | Axios |
-| **Icons** | Lucide React |
+| Layer                | Technology                                            |
+| -------------------- | ----------------------------------------------------- |
+| **Backend**          | Django 6, Django REST Framework, SimpleJWT            |
+| **Database**         | MySQL                                                 |
+| **Cache**            | Redis (via `django-redis`), falls back to LocMemCache |
+| **Frontend**         | Next.js 15 (App Router), TypeScript, Tailwind CSS     |
+| **State Management** | Zustand                                               |
+| **HTTP Client**      | Axios                                                 |
+| **Icons**            | Lucide React                                          |
 
 ---
 
@@ -136,12 +136,14 @@ docker run -d -p 6379:6379 redis:alpine
 ```
 
 **Verify Redis is running:**
+
 ```bash
 redis-cli ping
 # Expected: PONG
 ```
 
 **Set in `.env`:**
+
 ```
 REDIS_URL=redis://localhost:6379/0
 ```
@@ -186,16 +188,17 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 
 ### Authentication
 
-| Method | Endpoint | Auth Required | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/register/` | ❌ | Register a new user |
-| `POST` | `/api/auth/login/` | ❌ | Login and receive JWT tokens |
-| `POST` | `/api/auth/logout/` | ✅ | Blacklist the refresh token |
-| `POST` | `/api/auth/token/refresh/` | ❌ | Get new access token |
-| `GET` | `/api/auth/profile/` | ✅ | Get logged-in user's profile (cached) |
-| `PATCH` | `/api/auth/profile/` | ✅ | Update profile (invalidates cache) |
+| Method  | Endpoint                   | Auth Required | Description                           |
+| ------- | -------------------------- | ------------- | ------------------------------------- |
+| `POST`  | `/api/auth/register/`      | ❌            | Register a new user                   |
+| `POST`  | `/api/auth/login/`         | ❌            | Login and receive JWT tokens          |
+| `POST`  | `/api/auth/logout/`        | ✅            | Blacklist the refresh token           |
+| `POST`  | `/api/auth/token/refresh/` | ❌            | Get new access token                  |
+| `GET`   | `/api/auth/profile/`       | ✅            | Get logged-in user's profile (cached) |
+| `PATCH` | `/api/auth/profile/`       | ✅            | Update profile (invalidates cache)    |
 
 #### Register — Request Body (Donor)
+
 ```json
 {
   "role": "DONOR",
@@ -212,6 +215,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ```
 
 #### Register — Request Body (NGO)
+
 ```json
 {
   "role": "NGO",
@@ -235,6 +239,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ```
 
 #### Login — Request Body
+
 ```json
 {
   "email": "donor@example.com",
@@ -242,11 +247,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
   "role": "DONOR"
 }
 ```
+
 For **NGO** login, also send `"registration_number": "REG123456"`.  
 For **Orphanage** login, also send `"cci_registration_number": "CCI12345"`.  
 For **Hospital** login, also send `"hospital_registration_number": "HOSP123"` and `"official_email"`.
 
 #### Login — Response
+
 ```json
 {
   "success": true,
@@ -264,19 +271,20 @@ For **Hospital** login, also send `"hospital_registration_number": "HOSP123"` an
 
 ### Donor Endpoints
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/donor/listings/` | ✅ DONOR | Get my listings |
-| `POST` | `/api/donor/listings/` | ✅ DONOR | Create a food listing |
-| `PATCH` | `/api/donor/listings/<id>/status/` | ✅ DONOR | Update listing status |
-| `GET` | `/api/donor/posts/` | ✅ DONOR | Get my food posts |
-| `POST` | `/api/donor/posts/` | ✅ DONOR | Create a food post |
-| `PATCH` | `/api/donor/posts/<id>/` | ✅ DONOR | Update food post |
-| `DELETE` | `/api/donor/posts/<id>/` | ✅ DONOR | Delete food post |
-| `GET` | `/api/donor/available-requests/` | ✅ DONOR | See open receiver requests |
-| `POST` | `/api/donor/accept-request/<id>/` | ✅ DONOR | Accept a receiver's request |
+| Method   | Endpoint                           | Auth     | Description                 |
+| -------- | ---------------------------------- | -------- | --------------------------- |
+| `GET`    | `/api/donor/listings/`             | ✅ DONOR | Get my listings             |
+| `POST`   | `/api/donor/listings/`             | ✅ DONOR | Create a food listing       |
+| `PATCH`  | `/api/donor/listings/<id>/status/` | ✅ DONOR | Update listing status       |
+| `GET`    | `/api/donor/posts/`                | ✅ DONOR | Get my food posts           |
+| `POST`   | `/api/donor/posts/`                | ✅ DONOR | Create a food post          |
+| `PATCH`  | `/api/donor/posts/<id>/`           | ✅ DONOR | Update food post            |
+| `DELETE` | `/api/donor/posts/<id>/`           | ✅ DONOR | Delete food post            |
+| `GET`    | `/api/donor/available-requests/`   | ✅ DONOR | See open receiver requests  |
+| `POST`   | `/api/donor/accept-request/<id>/`  | ✅ DONOR | Accept a receiver's request |
 
 #### Create Food Post — Request Body
+
 ```json
 {
   "food_name": "Rice and Dal",
@@ -294,40 +302,40 @@ For **Hospital** login, also send `"hospital_registration_number": "HOSP123"` an
 
 ### Recipient Endpoints
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/recipient/available-listings/` | ✅ Receiver | Browse available donations (cached) |
-| `POST` | `/api/recipient/request/<id>/` | ✅ Receiver | Claim a donation |
-| `PATCH` | `/api/recipient/request/<id>/cancel/` | ✅ Receiver | Cancel a claim |
-| `POST` | `/api/recipient/request/<id>/complete/` | ✅ Receiver | Mark donation as completed |
-| `GET` | `/api/recipient/my-requests/` | ✅ Receiver | My accepted donations |
-| `GET` | `/api/recipient/food-requests/` | ✅ Receiver | My food requests |
-| `POST` | `/api/recipient/food-requests/` | ✅ Receiver | Create a food request |
-| `GET` | `/api/food-posts/` (public) | ❌ | Browse all available food posts |
+| Method  | Endpoint                                | Auth        | Description                         |
+| ------- | --------------------------------------- | ----------- | ----------------------------------- |
+| `GET`   | `/api/recipient/available-listings/`    | ✅ Receiver | Browse available donations (cached) |
+| `POST`  | `/api/recipient/request/<id>/`          | ✅ Receiver | Claim a donation                    |
+| `PATCH` | `/api/recipient/request/<id>/cancel/`   | ✅ Receiver | Cancel a claim                      |
+| `POST`  | `/api/recipient/request/<id>/complete/` | ✅ Receiver | Mark donation as completed          |
+| `GET`   | `/api/recipient/my-requests/`           | ✅ Receiver | My accepted donations               |
+| `GET`   | `/api/recipient/food-requests/`         | ✅ Receiver | My food requests                    |
+| `POST`  | `/api/recipient/food-requests/`         | ✅ Receiver | Create a food request               |
+| `GET`   | `/api/food-posts/` (public)             | ❌          | Browse all available food posts     |
 
 ---
 
 ### Admin Endpoints
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/admin/receivers/?status=pending` | ✅ Admin | List receivers by status |
-| `PATCH` | `/api/admin/receivers/<id>/approve/` | ✅ Admin | Approve a receiver |
-| `PATCH` | `/api/admin/receivers/<id>/reject/` | ✅ Admin | Reject a receiver |
-| `GET` | `/api/admin/users/` | ✅ Admin | List all users |
-| `GET` | `/api/admin/food-posts/` | ✅ Admin | List all food posts |
-| `GET` | `/api/admin/food-requests/` | ✅ Admin | List all food requests |
+| Method  | Endpoint                               | Auth     | Description              |
+| ------- | -------------------------------------- | -------- | ------------------------ |
+| `GET`   | `/api/admin/receivers/?status=pending` | ✅ Admin | List receivers by status |
+| `PATCH` | `/api/admin/receivers/<id>/approve/`   | ✅ Admin | Approve a receiver       |
+| `PATCH` | `/api/admin/receivers/<id>/reject/`    | ✅ Admin | Reject a receiver        |
+| `GET`   | `/api/admin/users/`                    | ✅ Admin | List all users           |
+| `GET`   | `/api/admin/food-posts/`               | ✅ Admin | List all food posts      |
+| `GET`   | `/api/admin/food-requests/`            | ✅ Admin | List all food requests   |
 
 ---
 
 ## 🔴 Redis Caching — What Is Cached
 
-| Cache Key | TTL | Invalidated When |
-|---|---|---|
-| `user_profile:<user_id>` | 5 min | Profile is updated (`PATCH /api/auth/profile/`) |
-| `food_posts:available` | 1 min | Any food post is created, updated, or deleted |
-| `available_listings` | 1 min | Any listing is created, accepted, cancelled, or completed |
-| `food_requests:open` | 1 min | Any food request is created, updated, or accepted |
+| Cache Key                | TTL   | Invalidated When                                          |
+| ------------------------ | ----- | --------------------------------------------------------- |
+| `user_profile:<user_id>` | 5 min | Profile is updated (`PATCH /api/auth/profile/`)           |
+| `food_posts:available`   | 1 min | Any food post is created, updated, or deleted             |
+| `available_listings`     | 1 min | Any listing is created, accepted, cancelled, or completed |
+| `food_requests:open`     | 1 min | Any food request is created, updated, or accepted         |
 
 **Why Redis?** These are the most frequently called endpoints. Caching eliminates repeated MySQL queries for data that doesn't change often, reducing response time from ~50–200ms to <5ms on cache hits.
 
@@ -338,31 +346,34 @@ For **Hospital** login, also send `"hospital_registration_number": "HOSP123"` an
 ## 🖥 Frontend Pages & Components
 
 ### Donor Flow
-| Page | Route | Description |
-|---|---|---|
-| Login | `/login` | Role selector + credentials + show/hide password |
-| Register | `/register` | Step 1: role, Step 2: form with show/hide passwords |
-| Dashboard | `/donor/dashboard` | Stats, recent listings, incoming requests |
-| Listings | `/donor/listings` | My food listings with status management |
-| Add Listing | `/donor/add-listing` | Create a new food listing |
-| Requests | `/donor/requests` | Open receiver food requests to fulfill |
-| Orders | `/donor/orders` | Accepted/completed orders |
-| Profile | `/donor/profile` | Edit profile information |
+
+| Page        | Route                | Description                                         |
+| ----------- | -------------------- | --------------------------------------------------- |
+| Login       | `/login`             | Role selector + credentials + show/hide password    |
+| Register    | `/register`          | Step 1: role, Step 2: form with show/hide passwords |
+| Dashboard   | `/donor/dashboard`   | Stats, recent listings, incoming requests           |
+| Listings    | `/donor/listings`    | My food listings with status management             |
+| Add Listing | `/donor/add-listing` | Create a new food listing                           |
+| Requests    | `/donor/requests`    | Open receiver food requests to fulfill              |
+| Orders      | `/donor/orders`      | Accepted/completed orders                           |
+| Profile     | `/donor/profile`     | Edit profile information                            |
 
 ### Recipient Flow
-| Page | Route | Description |
-|---|---|---|
-| Dashboard | `/recipient/dashboard` | Welcome greeting, stats, map, quick actions |
-| Browse | `/recipient/browse` | Browse available food donations |
-| Claims | `/recipient/claims` | My claimed donations |
-| Listings | `/recipient/listings` | My posted food requests |
-| Add Request | `/recipient/add-request` | Post a new food request |
-| Impact | `/recipient/impact` | View donation impact analytics |
-| Profile | `/recipient/profile` | Edit profile |
+
+| Page        | Route                    | Description                                 |
+| ----------- | ------------------------ | ------------------------------------------- |
+| Dashboard   | `/recipient/dashboard`   | Welcome greeting, stats, map, quick actions |
+| Browse      | `/recipient/browse`      | Browse available food donations             |
+| Claims      | `/recipient/claims`      | My claimed donations                        |
+| Listings    | `/recipient/listings`    | My posted food requests                     |
+| Add Request | `/recipient/add-request` | Post a new food request                     |
+| Impact      | `/recipient/impact`      | View donation impact analytics              |
+| Profile     | `/recipient/profile`     | Edit profile                                |
 
 ### Key Components
+
 - `StatsCards` — recipient stats overview
-- `MapSection` — nearby donations map  
+- `MapSection` — nearby donations map
 - `RoleInfoCard` — dynamic card based on user's receiver role
 - `useAuthStore` — Zustand store: login, register, logout, checkAuth
 - `lib/api.ts` — Axios client with auto token refresh on 401
@@ -401,24 +412,6 @@ Receiver claims → post status updated → cache invalidated again
 
 ---
 
-## 🧪 Running Tests
-
-```bash
-# Backend tests
-cd django_backend
-& "e:\Second-Serve-Platform\env\Scripts\python.exe" manage.py test accounts donors recipients --verbosity=2
-
-# Frontend build check
-cd frontend
-npm run build
-```
-
----
-
-## 📬 Contact & License
-
-Built as a community platform to reduce food waste and hunger.  
-MIT License.
 
 
 
@@ -426,4 +419,4 @@ MIT License.
 
 
 
-### Shivram
+Chodu git
