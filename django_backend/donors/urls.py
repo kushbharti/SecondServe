@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import FoodListingViewSet, FoodPostViewSet, AvailableRequestsView, AcceptRequestView, AdminFoodPostsView
+from .views import FoodListingViewSet, FoodPostViewSet, AvailableRequestsView, AcceptRequestView, AdminFoodPostsView, NearbyDonorsView
 
 router = DefaultRouter()
 router.register(r'listings', FoodListingViewSet, basename='listing')
@@ -12,4 +12,6 @@ urlpatterns = [
     path('accept-request/<uuid:pk>/', AcceptRequestView.as_view(), name='accept-request'),
     # Admin food posts
     path('admin-posts/', AdminFoodPostsView.as_view(), name='admin-food-posts'),
+    # Map: nearby donors with active posts
+    path('nearby/', NearbyDonorsView.as_view(), name='nearby-donors'),
 ]

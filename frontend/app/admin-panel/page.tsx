@@ -23,7 +23,7 @@ export default function AdminDashboardPage() {
 
     const fetchPending = async () => {
         try {
-            const res = await api.get('/accounts/admin/pending-receivers/');
+            const res = await api.get('/admin/receivers/');
             setPending(res.data?.data || res.data || []);
         } catch (err) {
             console.error(err);
@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
 
     const handleAction = async (id: string, action: 'approve' | 'reject') => {
         try {
-            await api.patch(`/accounts/admin/${action}-receiver/${id}/`);
+            await api.patch(`/admin/receivers/${id}/${action}/`);
             fetchPending();
         } catch (err) {
             console.error(err);

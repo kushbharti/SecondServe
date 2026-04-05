@@ -14,7 +14,8 @@ import {
   Home,
   Heart,
   PlusSquare,
-  Building
+  Building,
+  Map,
 } from 'lucide-react';
 
 export default function RecipientLayout({
@@ -37,6 +38,7 @@ export default function RecipientLayout({
   const navItems = [
     { href: '/recipient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/recipient/browse', label: 'Available Food', icon: Package },
+    { href: '/recipient/map', label: 'Nearby Map', icon: Map },
     { href: '/recipient/add-request', label: 'Create Request', icon: PlusCircle },
     { href: '/recipient/requests', label: 'My Requests', icon: List },
     { href: '/recipient/claims', label: 'My claims', icon: ClipboardList },

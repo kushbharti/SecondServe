@@ -102,7 +102,7 @@ class FoodPostSerializer(serializers.ModelSerializer):
             'expiry_time', 'pickup_address', 'city',
             'status', 'accepted_by', 'accepted_by_name', 'accepted_by_org',
             'accepted_by_phone', 'accepted_by_email', 'accepted_by_role',
-            'image', 'description', 'created_at',
+            'latitude', 'longitude', 'image', 'description', 'created_at',
         ]
         read_only_fields = (
             'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',

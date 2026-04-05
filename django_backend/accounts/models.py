@@ -24,6 +24,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_active', True)
         # Admins are auto-approved
         extra_fields.setdefault('verification_status', 'approved')
+        extra_fields.setdefault('role', 'ADMIN')
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_('Superuser must have is_staff=True.'))
@@ -43,6 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('ORPHANAGE', 'Orphanage'),
         ('OLD_AGE_HOME', 'Old Age Home'),
         ('GOVERNMENT_HOSPITAL', 'Government Hospital'),
+        ('ADMIN', 'Admin'),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -68,6 +68,11 @@ class FoodPost(models.Model):
     expiry_time = models.DateTimeField(blank=True, null=True)
     pickup_address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Map Feature Geolocation
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     accepted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
