@@ -248,6 +248,62 @@ class AdminListUsersView(generics.ListAPIView):
 
 
 # ---------------------------------------------------------------------------
+# Admin Views
+# ---------------------------------------------------------------------------
+
+class AdminDashboardStatsView(APIView):
+    """GET /api/admin/dashboard-stats/ — returns high level metrics."""
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        receivers = User.objects.filter(role__in=RECEIVER_ROLES)
+        total = receivers.count()
+        approved = receivers.filter(verification_status='approved').count()
+        rejected = receivers.filter(verification_status='rejected').count()
+        pending = receivers.filter(verification_status='pending').count()
+
+        return success_response(data={
+            "total_requests": total,
+            "approved": approved,
+            "rejected": rejected,
+            "pending": pending
+        }, message="Dashboard stats retrieved.")
+
+class AdminReceiverInsightsView(APIView):
+    """GET /api/admin/receiver-insights/ — returns analytics per receiver."""
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        # We'll use aggregation/annotation for efficiency or just loop
+        from django.db.models import Count, Q
+        from donors.models import FoodPost
+        from recipients.models import FoodRequest
+
+        receivers = User.objects.filter(role__in=RECEIVER_ROLES).order_by('role', '-date_joined')
+        
+        insights = []
+        for r in receivers:
+            org_name = r.organization_name or r.hospital_name or r.full_name or "Unknown Org"
+            requests_created = FoodRequest.objects.filter(receiver=r).count()
+            requests_fulfilled = FoodRequest.objects.filter(receiver=r, status='completed').count()
+            requests_pending = FoodRequest.objects.filter(receiver=r, status='pending').count()
+            donations_accepted = FoodPost.objects.filter(accepted_by=r).count()
+            
+            insights.append({
+                "id": str(r.id),
+                "organization_name": org_name,
+                "role": r.role,
+                "email": r.email,
+                "verification_status": r.verification_status,
+                "requests_created": requests_created,
+                "requests_fulfilled": requests_fulfilled,
+                "requests_pending": requests_pending,
+                "donations_accepted": donations_accepted,
+            })
+
+        return success_response(data=insights, message="Receiver insights retrieved.")
+
+# ---------------------------------------------------------------------------
 # Logout
 # ---------------------------------------------------------------------------
 

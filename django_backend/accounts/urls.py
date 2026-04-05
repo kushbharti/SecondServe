@@ -9,6 +9,8 @@ from .views import (
     AdminApproveReceiverView,
     AdminRejectReceiverView,
     AdminListUsersView,
+    AdminDashboardStatsView,
+    AdminReceiverInsightsView,
 )
 
 urlpatterns = [
@@ -26,4 +28,6 @@ urlpatterns = [
     path('admin/receivers/<uuid:pk>/approve/', AdminApproveReceiverView.as_view(), name='admin-approve-receiver'),
     path('admin/receivers/<uuid:pk>/reject/', AdminRejectReceiverView.as_view(), name='admin-reject-receiver'),
     path('admin/users/', AdminListUsersView.as_view(), name='admin-users'),
+    path('admin/dashboard-stats/', AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
+    path('admin/receiver-insights/', AdminReceiverInsightsView.as_view(), name='admin-receiver-insights'),
 ]

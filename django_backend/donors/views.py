@@ -17,7 +17,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def geocode_address(address: str):
+    """
+    Convert a pickup_address string to (lat, lng) using Google Geocoding API.
+    Returns (float, float) or (None, None) if geocoding fails or key is not set.
+    """
     api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
     if not api_key or not address:
         return None, None
@@ -33,7 +38,9 @@ def geocode_address(address: str):
         logger.warning('Geocoding failed for "%s": %s', address, exc)
     return None, None
 
+
 def haversine_km(lat1, lng1, lat2, lng2):
+    """Return great-circle distance in km between two (lat, lng) points."""
     R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -355,11 +362,24 @@ class AcceptRequestView(APIView):
         cache_service.invalidate('food_requests:pending')
         return success_response(data=FoodListingSerializer(listing).data, message='Request accepted successfully')
 
+
 # ---------------------------------------------------------------------------
 # Nearby Donors View (for Map feature)
 # ---------------------------------------------------------------------------
 
 class NearbyDonorsView(APIView):
+    """
+    GET /api/donor/nearby/?lat=&lng=&radius=50
+
+    Returns active FoodPosts whose donors are within `radius` km of the
+    receiver's location.  Uses the EXACT SAME queryset filter as
+    FoodPostViewSet.list() for receivers (status='pending', non-expired),
+    ensuring perfect consistency with the "Available Food / Browse" section.
+
+    Posts without geocoordinates are silently excluded.
+    Results are sorted ascending by distance; top-3 nearest are flagged.
+    Maximum 20 results returned.
+    """
     permission_classes = [permissions.IsAuthenticated, IsReceiver]
 
     def get(self, request):
@@ -373,8 +393,10 @@ class NearbyDonorsView(APIView):
             )
 
         radius_km = float(request.query_params.get('radius', 50))
+
         from django.utils import timezone
 
+        # ── Same filter as Browse Food for receivers ──────────────────────────
         posts = (
             FoodPost.objects
             .select_related('donor')
@@ -409,9 +431,10 @@ class NearbyDonorsView(APIView):
                         if post.image else None
                     ),
                     'distance_km': round(dist, 2),
-                    'is_top3': False,
+                    'is_top3': False,  # assigned below
                 })
 
+        # Sort by distance, cap at 20, mark top-3
         results.sort(key=lambda x: x['distance_km'])
         results = results[:20]
         for i, item in enumerate(results):

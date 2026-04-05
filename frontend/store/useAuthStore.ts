@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
-import { User, DONOR_ROLES, RECEIVER_ROLES } from '@/types/user';
+import { User, DONOR_ROLES, RECEIVER_ROLES, ADMIN_ROLES } from '@/types/user';
 
 interface AuthState {
   user: User | null;
@@ -17,11 +17,11 @@ interface AuthState {
 }
 
 // FIX: Helper to set cookies with role-aware expiry
-// Donors: 7 days, Receivers: 1 day (24h)
+// Donors and Admins: 7 days, Receivers: 1 day (24h)
 function setAuthCookies(access: string, refresh: string, role: string) {
-  const isDonor = DONOR_ROLES.includes(role as any);
-  const accessExpiry = isDonor ? 7 : 1;
-  const refreshExpiry = isDonor ? 30 : 7;
+  const isExtendedExpiry = DONOR_ROLES.includes(role as any) || ADMIN_ROLES.includes(role as any);
+  const accessExpiry = isExtendedExpiry ? 7 : 1;
+  const refreshExpiry = isExtendedExpiry ? 30 : 7;
 
   Cookies.set('accessToken', access, { expires: accessExpiry, sameSite: 'Lax' });
   Cookies.set('refreshToken', refresh, { expires: refreshExpiry, sameSite: 'Lax' });
@@ -51,7 +51,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const userRole = role || user?.role || '';
       if (typeof window !== 'undefined') {
-        if (DONOR_ROLES.includes(userRole)) {
+        if (ADMIN_ROLES.includes(userRole)) {
+          window.location.href = '/admin-panel';
+        } else if (DONOR_ROLES.includes(userRole)) {
           window.location.href = '/donor/dashboard';
         } else if (RECEIVER_ROLES.includes(userRole)) {
           window.location.href = '/recipient/dashboard';

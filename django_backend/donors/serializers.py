@@ -99,10 +99,10 @@ class FoodPostSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',
             'food_name', 'quantity', 'food_type', 'servings',
-            'expiry_time', 'pickup_address', 'city',
+            'expiry_time', 'pickup_address', 'city', 'latitude', 'longitude',
             'status', 'accepted_by', 'accepted_by_name', 'accepted_by_org',
             'accepted_by_phone', 'accepted_by_email', 'accepted_by_role',
-            'latitude', 'longitude', 'image', 'description', 'created_at',
+            'image', 'description', 'created_at',
         ]
         read_only_fields = (
             'id', 'donor', 'donor_name', 'donor_role', 'donor_phone', 'donor_email',
