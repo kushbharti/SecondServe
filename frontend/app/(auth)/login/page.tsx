@@ -50,8 +50,8 @@ export default function LoginPage() {
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [role, setRole] = useState<UserRole>("DONOR");
   const [error, setError] = useState<string | null>(null);
-  // Track which group is expanded: 'donor' | 'receiver'
-  const [group, setGroup] = useState<'donor' | 'receiver'>('donor');
+  // Track which group is expanded: 'donor' | 'receiver' | 'admin'
+  const [group, setGroup] = useState<'donor' | 'receiver' | 'admin'>('donor');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -161,6 +161,20 @@ export default function LoginPage() {
               ))}
             </div>
           )}
+
+          {/* Admin group */}
+          <button
+            type="button"
+            onClick={() => { setGroup('admin'); setRole('ADMIN'); }}
+            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+              group === 'admin'
+                ? 'bg-purple-50 border-purple-300 text-purple-700'
+                : 'bg-muted/30 border-input text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            <span>🛡️ I am an Administrator</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${group === 'admin' ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Registration number for receiver roles */}

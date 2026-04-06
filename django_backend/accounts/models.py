@@ -22,8 +22,9 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
-        # Admins are auto-approved
+        # Admins are auto-approved and get the ADMIN role
         extra_fields.setdefault('verification_status', 'approved')
+        extra_fields.setdefault('role', 'ADMIN')
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_('Superuser must have is_staff=True.'))
@@ -38,6 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     RECEIVER_ROLES = ('NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'GOVERNMENT_HOSPITAL')
 
     ROLE_CHOICES = (
+        ('ADMIN', 'Admin'),
         ('DONOR', 'Donor'),
         ('NGO', 'NGO'),
         ('ORPHANAGE', 'Orphanage'),

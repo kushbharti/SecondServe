@@ -4,10 +4,49 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction
+from django.conf import settings
 from .models import FoodListing, FoodPost
 from .serializers import FoodListingSerializer, FoodPostSerializer
 from accounts.permissions import IsDonor, IsAdmin, IsReceiver
 from backend.cache import cache_service
+import math
+import urllib.request
+import urllib.parse
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def geocode_address(address: str):
+    """
+    Convert a pickup_address string to (lat, lng) using Google Geocoding API.
+    Returns (float, float) or (None, None) if geocoding fails or key is not set.
+    """
+    api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
+    if not api_key or not address:
+        return None, None
+    try:
+        params = urllib.parse.urlencode({'address': address, 'key': api_key})
+        url = f'https://maps.googleapis.com/maps/api/geocode/json?{params}'
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            data = json.loads(resp.read())
+        if data.get('status') == 'OK':
+            loc = data['results'][0]['geometry']['location']
+            return float(loc['lat']), float(loc['lng'])
+    except Exception as exc:
+        logger.warning('Geocoding failed for "%s": %s', address, exc)
+    return None, None
+
+
+def haversine_km(lat1, lng1, lat2, lng2):
+    """Return great-circle distance in km between two (lat, lng) points."""
+    R = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlam = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def success_response(data, message="Success", status_code=status.HTTP_200_OK):
@@ -91,7 +130,12 @@ class FoodPostViewSet(viewsets.ModelViewSet):
 
 
     def perform_create(self, serializer):
-        serializer.save(donor=self.request.user)
+        instance = serializer.save(donor=self.request.user)
+        # Auto-geocode pickup_address to populate lat/lng for map feature
+        if instance.pickup_address and instance.latitude is None:
+            lat, lng = geocode_address(instance.pickup_address)
+            if lat is not None:
+                FoodPost.objects.filter(pk=instance.pk).update(latitude=lat, longitude=lng)
         cache_service.invalidate('food_posts:available')
 
     def list(self, request, *args, **kwargs):
@@ -317,3 +361,83 @@ class AcceptRequestView(APIView):
         listing.save(update_fields=['matched_user', 'status', 'updated_at'])
         cache_service.invalidate('food_requests:pending')
         return success_response(data=FoodListingSerializer(listing).data, message='Request accepted successfully')
+
+
+# ---------------------------------------------------------------------------
+# Nearby Donors View (for Map feature)
+# ---------------------------------------------------------------------------
+
+class NearbyDonorsView(APIView):
+    """
+    GET /api/donor/nearby/?lat=&lng=&radius=50
+
+    Returns active FoodPosts whose donors are within `radius` km of the
+    receiver's location.  Uses the EXACT SAME queryset filter as
+    FoodPostViewSet.list() for receivers (status='pending', non-expired),
+    ensuring perfect consistency with the "Available Food / Browse" section.
+
+    Posts without geocoordinates are silently excluded.
+    Results are sorted ascending by distance; top-3 nearest are flagged.
+    Maximum 20 results returned.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsReceiver]
+
+    def get(self, request):
+        try:
+            receiver_lat = float(request.query_params.get('lat', ''))
+            receiver_lng = float(request.query_params.get('lng', ''))
+        except (ValueError, TypeError):
+            return error_response(
+                'query params lat and lng (floats) are required.',
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        radius_km = float(request.query_params.get('radius', 50))
+
+        from django.utils import timezone
+
+        # ── Same filter as Browse Food for receivers ──────────────────────────
+        posts = (
+            FoodPost.objects
+            .select_related('donor')
+            .filter(
+                status='pending',
+                expiry_time__gt=timezone.now(),
+                latitude__isnull=False,
+                longitude__isnull=False,
+            )
+        )
+
+        results = []
+        for post in posts:
+            post_lat = float(post.latitude)
+            post_lng = float(post.longitude)
+            dist = haversine_km(receiver_lat, receiver_lng, post_lat, post_lng)
+            if dist <= radius_km:
+                donor = post.donor
+                results.append({
+                    'post_id':   str(post.id),
+                    'donor_id':  str(donor.id),
+                    'donor_name': donor.username or donor.full_name or donor.email,
+                    'latitude':  post_lat,
+                    'longitude': post_lng,
+                    'food_name': post.food_name,
+                    'food_type': post.food_type,
+                    'quantity':  post.quantity,
+                    'pickup_address': post.pickup_address or '',
+                    'expiry_time': post.expiry_time.isoformat() if post.expiry_time else None,
+                    'image': (
+                        request.build_absolute_uri(post.image.url)
+                        if post.image else None
+                    ),
+                    'distance_km': round(dist, 2),
+                    'is_top3': False,  # assigned below
+                })
+
+        # Sort by distance, cap at 20, mark top-3
+        results.sort(key=lambda x: x['distance_km'])
+        results = results[:20]
+        for i, item in enumerate(results):
+            item['is_top3'] = i < 3
+
+        return success_response(data=results, message='Nearby donors retrieved.')

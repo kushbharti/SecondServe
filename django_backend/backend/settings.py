@@ -140,6 +140,9 @@ _logging.getLogger('django').info(
 # Backend base URL — used to build absolute media/image URLs in serializers
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
 
+# Google Maps API key — used server-side for Geocoding pickup_address → lat/lng
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', '')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
