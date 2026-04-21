@@ -167,11 +167,6 @@ DB_HOST=localhost
 DB_PORT=3306
 
 # ==============================
-# Redis (Optional)
-# ==============================
-REDIS_URL=redis://localhost:6379/0
-
-# ==============================
 # CORS
 # ==============================
 CORS_ALLOWED_ORIGINS=http://localhost:3000
