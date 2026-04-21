@@ -145,14 +145,6 @@ npm run dev
 
 ---
 
-## Redis (Optional)
-
-```bash
-docker run -d -p 6379:6379 redis:alpine
-```
-
----
-
 # 🔑 Environment Variables Setup
 
 ## Backend `.env` (inside `django_backend/`)
